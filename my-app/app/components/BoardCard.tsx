@@ -10,29 +10,10 @@ import {
     Briefcase,
     LucideIcon,
 } from 'lucide-react';
-
-// --- TIPI E INTERFACCE ---
-
-export type BoardTheme = 'blue' | 'green' | 'purple' | 'orange';
-export type BoardCategory = 'university' | 'personal' | 'thesis' | 'work';
-
-export interface BoardStats {
-    deadlines: number;
-    inProgress: number;
-    completed: number;
-}
-
-interface BoardCardProps {
-    id: string | number;
-    title: string;
-    category: BoardCategory;
-    theme: BoardTheme;
-    stats: BoardStats;
-    onEdit: () => void;            // Funzione scatenata al click su Modifica
-}
+import {BoardCardProps, BoardCategory, BoardTheme} from "@/public/Board";
+import {categoryIcons} from "@/public/Category";
 
 // --- MAPPE DI STILE E ICONE ---
-
 const themeStyles: Record<BoardTheme, string> = {
     blue: 'bg-blue-50 border-blue-200 hover:border-blue-300 text-blue-900',
     green: 'bg-green-50 border-green-200 hover:border-green-300 text-green-900',
@@ -40,15 +21,7 @@ const themeStyles: Record<BoardTheme, string> = {
     orange: 'bg-orange-50 border-orange-200 hover:border-orange-300 text-orange-900',
 };
 
-const categoryIcons: Record<BoardCategory, LucideIcon> = {
-    university: BookOpen,
-    personal: Home,
-    thesis: GraduationCap,
-    work: Briefcase,
-};
-
 // --- COMPONENTE BOARD CARD ---
-
 export default function BoardCard({
                                       id,
                                       title,
@@ -73,7 +46,7 @@ export default function BoardCard({
     return (
         <div className={`relative group rounded-2xl p-5 transition-all duration-200 border shadow-sm hover:shadow-md ${baseClasses}`}>
 
-            {/* 1. HEADER CARD (Titolo + Icona + Menu Dropdown) */}
+            {/* HEADER CARD (Titolo + Icona + Menu Dropdown) */}
             <div className="flex items-start justify-between mb-4 relative z-20">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-white/60 rounded-lg backdrop-blur-sm shadow-sm">
@@ -84,7 +57,7 @@ export default function BoardCard({
                     </h3>
                 </div>
 
-                {/* Pulsante Menu (Dropdown Trigger) */}
+                {/* Pulsante Menu */}
                 <div className="relative">
                     <button
                         onClick={(e) => {
@@ -98,7 +71,7 @@ export default function BoardCard({
                 </div>
             </div>
 
-            {/* 2. CORPO CARD (Cliccabile -> Va alla Board) */}
+            {/*  CORPO CARD (Cliccabile -> Va alla Board) */}
             <Link href={`/board/${id}`} className="block space-y-3 relative z-10">
 
                 {/* Indicatore SCADENZE */}

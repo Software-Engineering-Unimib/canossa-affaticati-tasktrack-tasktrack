@@ -2,36 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Trash2, Check, Loader2, Save } from 'lucide-react';
-import {BoardCategory, BoardStats} from "@/app/components/BoardCard";
-
-// Riusiamo i tipi (o importali da un file types.ts condiviso)
-export type BoardTheme = 'blue' | 'green' | 'purple' | 'orange';
-
-// Interfaccia per i dati della bacheca esistente
-export interface BoardData {
-    id: string | number;
-    title: string;
-    description: string;
-    category: BoardCategory;
-    theme: BoardTheme;
-    stats: BoardStats;
-    guests: string[];
-}
+import {Board, BoardTheme, themeOptions} from "@/public/Board";
 
 interface EditBoardDialogProps {
     isOpen: boolean;
-    initialData: BoardData | null; // I dati attuali della bacheca
+    initialData: Board | null; // I dati attuali della bacheca
     onClose: () => void;
-    onUpdate: (updatedData: BoardData) => void;
+    onUpdate: (updatedData: Board) => void;
     onDelete: (id: string | number) => void; // Callback per l'eliminazione
 }
-
-const themeOptions: { value: BoardTheme; label: string; class: string }[] = [
-    { value: 'blue', label: 'Blu', class: 'bg-blue-500' },
-    { value: 'green', label: 'Verde', class: 'bg-green-500' },
-    { value: 'purple', label: 'Viola', class: 'bg-purple-500' },
-    { value: 'orange', label: 'Arancione', class: 'bg-orange-400' },
-];
 
 export default function EditBoardDialog({
                                             isOpen,

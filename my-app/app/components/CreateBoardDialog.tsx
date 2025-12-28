@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, UserPlus, Trash2, Check, Loader2 } from 'lucide-react';
+import {themeOptions} from "@/public/Board";
 
 // Tipi definiti per mantenere coerenza con il resto del progetto
 export type BoardTheme = 'blue' | 'green' | 'purple' | 'orange';
@@ -19,13 +20,6 @@ export interface NewBoardData {
     guests: string[];
 }
 
-// Configurazione colori per il selettore
-const themeOptions: { value: BoardTheme; label: string; class: string }[] = [
-    { value: 'blue', label: 'Blu', class: 'bg-blue-500' },
-    { value: 'green', label: 'Verde', class: 'bg-green-500' },
-    { value: 'purple', label: 'Viola', class: 'bg-purple-500' },
-    { value: 'orange', label: 'Arancione', class: 'bg-orange-400' },
-];
 
 export default function CreateBoardDialog({ isOpen, onClose, onCreate }: CreateBoardDialogProps) {
     // Stati del Form

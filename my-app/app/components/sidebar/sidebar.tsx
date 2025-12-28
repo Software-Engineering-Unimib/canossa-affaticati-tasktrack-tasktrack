@@ -20,12 +20,8 @@ import LogoMobile from "@/app/components/logo/logoMobile";
 import LogoDesktop from "@/app/components/logo/logoDesktop";
 import SidebarBoardItem from "@/app/components/sidebar/sidebarBoardItem";
 import CreateBoardDialog, {NewBoardData} from "@/app/components/CreateBoardDialog";
-
-interface Board {
-    id: number;
-    name: string;
-    color: string;
-}
+import {initialBoards} from "@/public/datas";
+import {getClassByTheme, themeOptions} from "@/public/Board";
 
 interface NavItemProps {
     href: string;
@@ -42,12 +38,6 @@ export default function Sidebar() {
     // NUOVO STATO: Gestisce l'apertura/chiusura della sezione bacheche
     // Inizializzato a 'true' così l'utente vede le bacheche al primo avvio
     const [isBoardsOpen, setIsBoardsOpen] = useState<boolean>(true);
-
-    const recentBoards: Board[] = [
-        { id: 1, name: 'Università', color: 'bg-blue-500' },
-        { id: 2, name: 'Personale & Hobby', color: 'bg-green-500' },
-        { id: 3, name: 'Progetto Tesi', color: 'bg-purple-500' },
-    ];
 
     const NavItem: React.FC<NavItemProps> = ({ href, icon: Icon, label, active = false }) => (
         <Link
@@ -145,12 +135,12 @@ export default function Sidebar() {
                         {/* Contenuto Condizionale (Lista Bacheche) */}
                         {isBoardsOpen && (
                             <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
-                                {recentBoards.map((board) => (
+                                {initialBoards.map((board) => (
                                     <SidebarBoardItem
                                         key={board.id}
                                         id={board.id}
-                                        name={board.name}
-                                        color={board.color}
+                                        name={board.title}
+                                        color={getClassByTheme(board.theme)}
                                     />
                                 ))}
 

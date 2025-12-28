@@ -10,7 +10,7 @@ interface SidebarBoardItemProps {
     color: string;       // Es. 'bg-blue-500'
 }
 
-export default function SidebarBoardItem({ id, name, color }: SidebarBoardItemProps) {
+export default function SidebarBoardItem({ id, name, color}: SidebarBoardItemProps) {
     return (
         <Link
             href={`/board/${id}`}
