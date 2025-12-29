@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import RegisterDialog from "@/app/components/auth/registerDialog";
+import ForgotPasswordDialog from "@/app/components/auth/forgotPasswordDialog";
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -10,6 +11,7 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+    const [isForgotOpen, setIsForgotOpen] = useState(false);
 
     const handleLogin = async (e: { preventDefault: () => void; }) => {
         e.preventDefault();
@@ -113,9 +115,13 @@ export default function Login() {
                                     Password
                                 </label>
                                 <div className="text-sm">
-                                    <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                                        Password dimenticata?
-                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsForgotOpen(true)}
+                                        className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline"
+                                    >
+                                        Hai dimenticato la password?
+                                    </button>
                                 </div>
                             </div>
                             <div className="relative">
@@ -204,6 +210,10 @@ export default function Login() {
                         onRegisterSuccess={() => {
                             console.log("Utente registrato, ora puoi fare auto-login o mostrare un messaggio");
                         }}
+                    />
+                    <ForgotPasswordDialog
+                        isOpen={isForgotOpen}
+                        onClose={() => setIsForgotOpen(false)}
                     />
                 </div>
             </div>
