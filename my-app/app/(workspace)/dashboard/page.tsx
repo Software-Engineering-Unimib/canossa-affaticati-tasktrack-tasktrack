@@ -8,8 +8,6 @@ import BoardCard from "@/app/components/BoardCard";
 import {initialBoards} from "@/public/datas";
 import {Board} from "@/public/Board";
 
-// --- DATI INIZIALI (MOCK) ---
-
 export default function WorkspacePage() {
     // --- STATI ---
     const [boards, setBoards] = useState<Board[]>(initialBoards);
