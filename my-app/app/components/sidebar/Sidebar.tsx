@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import LogoMobile from "@/app/components/logo/logoMobile";
 import LogoDesktop from "@/app/components/logo/logoDesktop";
-import SidebarBoardItem from "@/app/components/sidebar/sidebarBoardItem";
+import SidebarBoardItem from "@/app/components/sidebar/SidebarBoardItem";
 import CreateBoardDialog, {NewBoardData} from "@/app/components/CreateBoardDialog";
 import {initialBoards} from "@/public/datas";
 import {getClassByTheme} from "@/public/Board";
