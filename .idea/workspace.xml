@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b273f98b-e619-429c-9da5-974c0f046c46" name="Changes" comment="Ultimi cambiamenti per il setup di progetto con una base per il resto del lavoro">
-      <change afterPath="$PROJECT_DIR$/my-app/app/components/auth/registerDialog.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/my-app/app/(auth)/login/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/my-app/app/(auth)/login/page.tsx" afterDir="false" />
+    <list default="true" id="b273f98b-e619-429c-9da5-974c0f046c46" name="Changes" comment="Aggiunta del dialogo per il recupero della password e aggiornamenti al file .gitignore inoltre agiunte le pagine generate AI di terms e privacy">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/my-app/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/my-app/.gitignore" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,24 +49,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "registration",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/christiancanossa/Desktop/TaskTrack/my-app/app",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "bun",
-    "ts.external.directory.path": "/Users/christiancanossa/Desktop/TaskTrack/my-app/node_modules/typescript/lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;registration&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/christiancanossa/Desktop/TaskTrack/my-app/app&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;bun&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Users/christiancanossa/Desktop/TaskTrack/my-app/node_modules/typescript/lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/my-app/app" />
@@ -87,7 +87,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1766936212008</updated>
-      <workItem from="1766936213660" duration="6894000" />
+      <workItem from="1766936213660" duration="7922000" />
     </task>
     <task id="LOCAL-00001" summary="cambiamenti al gitignore">
       <option name="closed" value="true" />
@@ -105,7 +105,23 @@
       <option name="project" value="LOCAL" />
       <updated>1766942570662</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Aggiunta del dialogo di registrazione e integrazione nel login">
+      <option name="closed" value="true" />
+      <created>1767028817023</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1767028817023</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Aggiunta del dialogo per il recupero della password e aggiornamenti al file .gitignore inoltre agiunte le pagine generate AI di terms e privacy">
+      <option name="closed" value="true" />
+      <created>1767029648853</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1767029648853</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -125,7 +141,9 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="cambiamenti al gitignore" />
     <MESSAGE value="Ultimi cambiamenti per il setup di progetto con una base per il resto del lavoro" />
-    <option name="LAST_COMMIT_MESSAGE" value="Ultimi cambiamenti per il setup di progetto con una base per il resto del lavoro" />
+    <MESSAGE value="Aggiunta del dialogo di registrazione e integrazione nel login" />
+    <MESSAGE value="Aggiunta del dialogo per il recupero della password e aggiornamenti al file .gitignore inoltre agiunte le pagine generate AI di terms e privacy" />
+    <option name="LAST_COMMIT_MESSAGE" value="Aggiunta del dialogo per il recupero della password e aggiornamenti al file .gitignore inoltre agiunte le pagine generate AI di terms e privacy" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
