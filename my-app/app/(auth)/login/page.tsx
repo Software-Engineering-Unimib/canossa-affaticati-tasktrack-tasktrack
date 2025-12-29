@@ -1,14 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import RegisterDialog from "@/app/components/auth/registerDialog";
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
     const handleLogin = async (e: { preventDefault: () => void; }) => {
         e.preventDefault();
@@ -189,12 +190,21 @@ export default function Login() {
                         <div className="text-center mt-4">
                             <p className="text-sm text-gray-600">
                                 Non hai ancora un account?{' '}
-                                <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-500">
-                                    Registrati ora
-                                </Link>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRegisterOpen(true)}
+                                    className="font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                                >Registrati ora</button>
                             </p>
                         </div>
                     </form>
+                    <RegisterDialog
+                        isOpen={isRegisterOpen}
+                        onClose={() => setIsRegisterOpen(false)}
+                        onRegisterSuccess={() => {
+                            console.log("Utente registrato, ora puoi fare auto-login o mostrare un messaggio");
+                        }}
+                    />
                 </div>
             </div>
         </div>
