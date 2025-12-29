@@ -15,10 +15,6 @@ interface AuthLayoutProps {
 export default function AuthLayout({ children }: AuthLayoutProps) {
     return (
         <main className="min-h-screen w-full bg-white">
-            {/* Questo layout è intenzionalmente semplice.
-        Renderizza la pagina figlia (Login o Register) a piena grandezza
-        per permettere il design "Split Screen" definito nella pagina stessa.
-      */}
             {children}
         </main>
     );
