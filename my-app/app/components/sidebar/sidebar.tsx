@@ -21,7 +21,8 @@ import LogoDesktop from "@/app/components/logo/logoDesktop";
 import SidebarBoardItem from "@/app/components/sidebar/sidebarBoardItem";
 import CreateBoardDialog, {NewBoardData} from "@/app/components/CreateBoardDialog";
 import {initialBoards} from "@/public/datas";
-import {getClassByTheme, themeOptions} from "@/public/Board";
+import {getClassByTheme} from "@/public/Board";
+import {useFocus} from "@/app/context/FocusContext";
 
 interface NavItemProps {
     href: string;
@@ -32,7 +33,6 @@ interface NavItemProps {
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
     // NUOVO STATO: Gestisce l'apertura/chiusura della sezione bacheche
@@ -62,6 +62,8 @@ export default function Sidebar() {
         // Qui faresti la chiamata al backend o aggiorneresti lo stato locale
         setIsDialogOpen(false);
     };
+
+    const { isFocusMode, toggleFocusMode } = useFocus();
 
     return (
         <>
@@ -164,7 +166,7 @@ export default function Sidebar() {
                             <span>Modalità Focus</span>
                         </div>
                         <button
-                            onClick={() => setIsFocusMode(!isFocusMode)}
+                            onClick={toggleFocusMode}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${isFocusMode ? 'bg-purple-600' : 'bg-gray-200'}`}
                             role="switch"
                             aria-checked={isFocusMode}

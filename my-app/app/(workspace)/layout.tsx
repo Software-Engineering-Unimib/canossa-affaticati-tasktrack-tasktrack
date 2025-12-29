@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "../globals.css";
 import Sidebar from "@/app/components/sidebar/sidebar";
+import {FocusProvider} from "@/app/context/FocusContext";
+import FocusOverlay from "@/app/components/FocusOverlay";
 
 
 export const metadata: Metadata = {
@@ -14,29 +16,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
     return (
-        // 1. Contenitore Esterno: Occupa tutta l'altezza dello schermo (h-screen)
-        // e impedisce lo scroll del body (overflow-hidden)
-        <div className="flex h-screen overflow-hidden bg-gray-50">
+        <FocusProvider>
+            <div className="flex h-screen overflow-hidden bg-gray-50">
 
-            {/* 2. La Sidebar: Non scrolla insieme alla pagina, ha il suo scroll interno se serve */}
-            <div className="flex-none hidden lg:block">
-                <Sidebar />
+                {/* La Sidebar rimane a sinistra (fuori dall'overlay viola) */}
+                <div className="flex-none hidden lg:block">
+                    <Sidebar />
+                </div>
+                <div className="lg:hidden">
+                    <Sidebar />
+                </div>
+
+                {/* Area Principale */}
+                <main className="flex-1 overflow-y-auto relative scroll-smooth flex flex-col">
+
+                    {/* L'overlay è posizionato 'absolute' o 'fixed' sopra il contenuto
+              ma dentro <main>, così la Sidebar resta cliccabile per spegnerlo. */}
+                    <FocusOverlay />
+
+                    {/* Il contenuto della pagina (Workspace, Board, ecc.) */}
+                    <div className="flex-1 relative z-0">
+                        {children}
+                    </div>
+
+                </main>
+
             </div>
-
-            {/* Sidebar Mobile: Il componente Sidebar gestisce già la sua visibilità mobile (fixed) */}
-            <div className="lg:hidden">
-                <Sidebar />
-            </div>
-
-            {/* 3. Area Contenuto (Main):
-          - flex-1: Prende tutto lo spazio rimanente
-          - overflow-y-auto: ABILITA lo scroll solo qui dentro
-          - relative: Per posizionare correttamente elementi assoluti interni
-      */}
-            <main className="flex-1 overflow-y-auto relative scroll-smooth">
-                {children}
-            </main>
-
-        </div>
+        </FocusProvider>
     );
 }
