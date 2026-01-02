@@ -1,7 +1,6 @@
-// Riusiamo i tipi (o importali da un file types.ts condiviso)
-export type BoardTheme = 'blue' | 'green' | 'purple' | 'orange';
-
 // Interfaccia per i dati della bacheca esistente
+import { BoardCategory } from "@/public/BoardCategory";
+
 export interface Board {
     id: string | number;
     title: string;
@@ -12,7 +11,10 @@ export interface Board {
     guests: string[];
 }
 
-export const themeOptions: { value: BoardTheme; label: string; class: string }[] = [
+// Riusiamo i tipi (o importali da un file types.ts condiviso)
+export type BoardTheme = 'blue' | 'green' | 'purple' | 'orange';
+
+export const themeBoardOptions: { value: BoardTheme; label: string; class: string }[] = [
     { value: 'blue', label: 'Blu', class: 'bg-blue-500' },
     { value: 'green', label: 'Verde', class: 'bg-green-500' },
     { value: 'purple', label: 'Viola', class: 'bg-purple-500' },
@@ -20,12 +22,16 @@ export const themeOptions: { value: BoardTheme; label: string; class: string }[]
 ];
 
 export function getClassByTheme(themeValue: string): string {
-    const theme = themeOptions.find(t => t.value === themeValue);
-    return theme ? theme.class : 'bg-blue-500'; // Ritorna un default se non trova nulla
+    const theme = themeBoardOptions.find(t => t.value === themeValue);
+    return theme ? theme.class : 'bg-blue-500';
 }
 
-
-export type BoardCategory = 'university' | 'personal' | 'thesis' | 'work';
+export const themeCardStyles: Record<BoardTheme, string> = {
+    blue: 'bg-blue-50 border-blue-200 hover:border-blue-300 text-blue-900',
+    green: 'bg-green-50 border-green-200 hover:border-green-300 text-green-900',
+    purple: 'bg-purple-50 border-purple-200 hover:border-purple-300 text-purple-900',
+    orange: 'bg-orange-50 border-orange-200 hover:border-orange-300 text-orange-900',
+};
 
 export interface BoardStats {
     deadlines: number;
@@ -33,11 +39,3 @@ export interface BoardStats {
     completed: number;
 }
 
-export interface BoardCardProps {
-    id: string | number;
-    title: string;
-    category: BoardCategory;
-    theme: BoardTheme;
-    stats: BoardStats;
-    onEdit: () => void; // Funzione scatenata al click su Modifica
-}

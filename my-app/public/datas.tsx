@@ -23,7 +23,7 @@ export const initialBoards: Board[] = [
         id: 3,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]
@@ -32,7 +32,7 @@ export const initialBoards: Board[] = [
         id: 4,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]
@@ -59,7 +59,7 @@ export const initialBoards: Board[] = [
         id: 7,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]
@@ -68,7 +68,7 @@ export const initialBoards: Board[] = [
         id: 8,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]
@@ -95,7 +95,7 @@ export const initialBoards: Board[] = [
         id: 11,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]
@@ -104,7 +104,7 @@ export const initialBoards: Board[] = [
         id: 12,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]
@@ -131,7 +131,7 @@ export const initialBoards: Board[] = [
         id: 15,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]
@@ -140,7 +140,7 @@ export const initialBoards: Board[] = [
         id: 16,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "thesis",
+        category: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
         guests: ["prof.verdi@uni.it"]

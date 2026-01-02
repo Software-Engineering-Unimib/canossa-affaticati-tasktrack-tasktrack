@@ -4,22 +4,21 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
     MoreVertical,
-    BookOpen,
-    Home,
-    GraduationCap,
-    Briefcase,
-    LucideIcon,
+    BookOpen
 } from 'lucide-react';
-import {BoardCardProps, BoardCategory, BoardTheme} from "@/public/Board";
-import {categoryIcons} from "@/public/Category";
+import {BoardTheme} from "@/public/Board";
+import {categoryBoardIcons, BoardCategory} from "@/public/BoardCategory";
+import {BoardStats, themeCardStyles} from "../../public/Board";
 
-// --- MAPPE DI STILE E ICONE ---
-const themeStyles: Record<BoardTheme, string> = {
-    blue: 'bg-blue-50 border-blue-200 hover:border-blue-300 text-blue-900',
-    green: 'bg-green-50 border-green-200 hover:border-green-300 text-green-900',
-    purple: 'bg-purple-50 border-purple-200 hover:border-purple-300 text-purple-900',
-    orange: 'bg-orange-50 border-orange-200 hover:border-orange-300 text-orange-900',
-};
+export interface BoardCardProps {
+    id: string | number;
+    title: string;
+    category: BoardCategory;
+    theme: BoardTheme;
+    stats: BoardStats;
+    onEdit: () => void; // Funzione scatenata al click su Modifica
+}
+
 
 // --- COMPONENTE BOARD CARD ---
 export default function BoardCard({
@@ -31,10 +30,9 @@ export default function BoardCard({
                                       onEdit,
                                   }: BoardCardProps) {
 
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    const Icon = categoryIcons[category] || BookOpen;
-    const baseClasses = themeStyles[theme] || themeStyles.blue;
+    const [isMenuOpen, setIsMenuOpen] = useState(false); // Stato per gestire l'apertura del menu di modifica ed eliminazione
+    const Icon = categoryBoardIcons[category] || BookOpen; //Prende da BoardCategory.tsx l'icona in base alla categoria
+    const baseClasses = themeCardStyles[theme] || themeCardStyles.blue; // Prende da Board.tsx gli stili in base al tema scelto per la board
 
     // Handler per chiudere il menu se si clicca fuori (overlay invisibile)
     const closeMenu = (e: React.MouseEvent) => {

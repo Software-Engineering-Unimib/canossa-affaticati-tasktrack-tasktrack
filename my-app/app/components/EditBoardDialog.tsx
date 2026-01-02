@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Trash2, Check, Loader2, Save } from 'lucide-react';
-import {Board, BoardTheme, themeOptions} from "@/public/Board";
+import { X, UserPlus, Trash2, Check, Loader2, Save, LayoutGrid, ChevronDown } from 'lucide-react';
+import { Board, BoardTheme, themeBoardOptions } from "@/public/Board";
+import { BoardCategory, categoryBoardOptions } from '@/public/BoardCategory';
 
 interface EditBoardDialogProps {
     isOpen: boolean;
-    initialData: Board | null; // I dati attuali della bacheca
+    initialData: Board | null;
     onClose: () => void;
     onUpdate: (updatedData: Board) => void;
-    onDelete: (id: string | number) => void; // Callback per l'eliminazione
+    onDelete: (id: string | number) => void;
 }
 
 export default function EditBoardDialog({
@@ -23,22 +24,22 @@ export default function EditBoardDialog({
     // Stati del Form
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<BoardCategory>('personal'); // Nuovo Stato
     const [selectedTheme, setSelectedTheme] = useState<BoardTheme>('blue');
     const [guests, setGuests] = useState<string[]>([]);
     const [guestEmail, setGuestEmail] = useState('');
-
     const [isLoading, setIsLoading] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Per evitare cancellazioni accidentali
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // --- EFFETTO DI SINCRONIZZAZIONE ---
-    // Quando il dialog si apre o cambiano i dati iniziali, riempiamo i campi
     useEffect(() => {
         if (isOpen && initialData) {
             setTitle(initialData.title);
             setDescription(initialData.description || '');
+            setSelectedCategory(initialData.category); // Sincronizza categoria
             setSelectedTheme(initialData.theme);
             setGuests(initialData.guests || []);
-            setShowDeleteConfirm(false); // Reset conferma eliminazione
+            setShowDeleteConfirm(false);
         }
     }, [isOpen, initialData]);
 
@@ -61,13 +62,13 @@ export default function EditBoardDialog({
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulazione latenza network
         await new Promise(resolve => setTimeout(resolve, 800));
 
         onUpdate({
             ...initialData,
             title,
             description,
+            category: selectedCategory, // Invia la categoria aggiornata
             theme: selectedTheme,
             guests
         });
@@ -77,12 +78,10 @@ export default function EditBoardDialog({
     };
 
     const handleDelete = () => {
-        // Se è la prima volta che clicca, mostra la conferma
         if (!showDeleteConfirm) {
             setShowDeleteConfirm(true);
             return;
         }
-        // Se ha già confermato, elimina
         onDelete(initialData.id);
         onClose();
     };
@@ -106,7 +105,7 @@ export default function EditBoardDialog({
                 <div className="overflow-y-auto p-6 space-y-6">
                     <form id="edit-board-form" onSubmit={handleSubmit} className="space-y-6">
 
-                        {/* 1. Titolo e Descrizione */}
+                        {/* 1. Titolo, Descrizione e Categoria */}
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="edit-title" className="block text-sm font-semibold text-slate-700 mb-1">
@@ -134,6 +133,33 @@ export default function EditBoardDialog({
                                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm resize-none text-slate-700"
                                 />
                             </div>
+
+                            <div>
+                                <label htmlFor="edit-category" className="block text-sm font-semibold text-slate-700 mb-1">
+                                    Categoria
+                                </label>
+                                <div className="relative">
+                                    {/* Icona sinistra */}
+                                    <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+
+                                    <select
+                                        id="edit-category"
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value as BoardCategory)}
+                                        className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm bg-white appearance-none text-slate-700 font-medium cursor-pointer hover:bg-slate-50"
+                                    >
+                                        {categoryBoardOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    {/* Icona chevron destra per indicare il dropdown */}
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                </div>
+                            </div>
+
                         </div>
 
                         {/* 2. Colore Tema */}
@@ -142,16 +168,16 @@ export default function EditBoardDialog({
                                 Tema Colore
                             </label>
                             <div className="flex gap-3">
-                                {themeOptions.map((theme) => (
+                                {themeBoardOptions.map((theme) => (
                                     <button
                                         key={theme.value}
                                         type="button"
                                         onClick={() => setSelectedTheme(theme.value)}
                                         className={`
-                        w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none ring-2 ring-offset-2
-                        ${theme.class}
-                        ${selectedTheme === theme.value ? 'ring-slate-400 scale-110 shadow-md' : 'ring-transparent'}
-                    `}
+                                            w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none ring-2 ring-offset-2
+                                            ${theme.class}
+                                            ${selectedTheme === theme.value ? 'ring-slate-400 scale-110 shadow-md' : 'ring-transparent'}
+                                        `}
                                     >
                                         {selectedTheme === theme.value && (
                                             <Check className="w-5 h-5 text-white stroke-[3]" />
@@ -167,7 +193,6 @@ export default function EditBoardDialog({
                                 Gestisci Collaboratori
                             </label>
 
-                            {/* Input Aggiunta */}
                             <div className="flex gap-2 mb-3">
                                 <div className="relative flex-1">
                                     <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -195,7 +220,6 @@ export default function EditBoardDialog({
                                 </button>
                             </div>
 
-                            {/* Lista Ospiti Esistenti */}
                             {guests.length > 0 ? (
                                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 max-h-32 overflow-y-auto">
                                     <div className="flex flex-wrap gap-2">
@@ -226,7 +250,6 @@ export default function EditBoardDialog({
                 {/* Footer Actions */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-gray-50/50">
 
-                    {/* Tasto Elimina (con conferma) */}
                     <div className="flex items-center">
                         {showDeleteConfirm ? (
                             <div className="flex items-center gap-2 animate-in slide-in-from-left-2 fade-in duration-200">
@@ -258,7 +281,6 @@ export default function EditBoardDialog({
                         )}
                     </div>
 
-                    {/* Tasti Salva/Annulla */}
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
@@ -269,7 +291,7 @@ export default function EditBoardDialog({
                         </button>
                         <button
                             type="submit"
-                            form="edit-board-form" // Collega il bottone al form
+                            form="edit-board-form"
                             disabled={isLoading || !title}
                             className="px-5 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all disabled:opacity-70 flex items-center gap-2"
                         >
