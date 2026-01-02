@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import {Search } from 'lucide-react';
 import EditCategoryDialog from "@/app/components/categories/EditCategoryDialog";
-import BoardCard from "@/app/components/Board/BoardCard";
 import {initialBoards} from "@/public/datas";
 import {Board} from "@/public/Board";
+import CategoryCard from '@/app/components/categories/CategoryCard';
 
 export default function WorkspacePage() {
     // --- STATI ---
@@ -20,17 +20,11 @@ export default function WorkspacePage() {
         board.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // 2. AGGIORNAMENTO
     const handleUpdateBoard = (updatedData: Board) => {
         setBoards(prevBoards =>
             prevBoards.map(board => board.id === updatedData.id ? updatedData : board)
         );
         setBoardToEdit(null);
-    };
-
-    const handleDeleteBoard = (id: string | number) => {
-        setBoards(prevBoards => prevBoards.filter(board => board.id !== id));
-        setBoardToEdit(null); // Chiude il dialog se aperto
     };
 
     return (
@@ -43,7 +37,7 @@ export default function WorkspacePage() {
                         Buongiorno, Mario! 👋
                     </h1>
                     <p className="text-slate-500 mt-2 text-lg">
-                        Ecco una panoramica dei tuoi spazi di lavoro attivi.
+                        Ecco la lista delle tue bacheche e delle categorie create finora.
                     </p>
                 </div>
 
@@ -65,10 +59,10 @@ export default function WorkspacePage() {
 
                 {/* MAPPATURA BACHECHE */}
                 {filteredBoards.map((board) => (
-                    <BoardCard
+                    <CategoryCard
                         key={board.id}
-                        {...board} // Passa id, title, category, theme, stats
-
+                        {...board}
+                        
                         // Apertura Dialog Modifica
                         onEdit={() => setBoardToEdit(board)}
                     />
@@ -80,7 +74,6 @@ export default function WorkspacePage() {
                         Nessuna bacheca trovata per "{searchQuery}"
                     </div>
                 )}
-
             </div>
 
             {/* --- DIALOGS --- */}
@@ -91,9 +84,7 @@ export default function WorkspacePage() {
                 initialData={boardToEdit}     // Passa i dati attuali
                 onClose={() => setBoardToEdit(null)}
                 onUpdate={handleUpdateBoard}
-                onDelete={handleDeleteBoard}
             />
-
         </div>
     );
 }

@@ -1,11 +1,13 @@
 // Interfaccia per i dati della bacheca esistente
-import { BoardCategory } from "@/public/BoardCategory";
+import { Icon } from "@/public/BoardIcon";
+import { Category } from "./Category";
 
 export interface Board {
     id: string | number;
     title: string;
     description: string;
-    category: BoardCategory;
+    icon: Icon;
+    categories: Category[];
     theme: BoardTheme;
     stats: BoardStats;
     guests: string[];
@@ -32,6 +34,8 @@ export const themeCardStyles: Record<BoardTheme, string> = {
     purple: 'bg-purple-50 border-purple-200 hover:border-purple-300 text-purple-900',
     orange: 'bg-orange-50 border-orange-200 hover:border-orange-300 text-orange-900',
 };
+
+export type BoardIcon = 'university' | 'personal' | 'work' | 'other';
 
 export interface BoardStats {
     deadlines: number;

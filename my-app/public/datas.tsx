@@ -6,145 +6,169 @@ export const initialBoards: Board[] = [
         id: 1,
         title: "Università",
         description: "Gestione esami, scadenze accademiche e materiale di studio.",
-        category: "university",
+        icon: "university",
         theme: "blue",
         stats: { deadlines: 2, inProgress: 5, completed: 12 },
-        guests: ["marco.rossi@studenti.it"]
+        guests: ["marco.rossi@studenti.it"],
+        categories: [
+            { id: 'c-1', name: 'Esami', color: 'bg-red-300' },
+            { id: 'c-2', name: 'Progetti', color: 'bg-blue-300' },
+            { id: 'c-5', name: 'Materiale', color: 'bg-green-300' },
+        ]
     },
     {
         id: 2,
         title: "Personale & Hobby",
         description: "Lista della spesa, obiettivi palestra e film da vedere.",
-        category: "personal",
+        icon: "personal",
         theme: "green",
         stats: { deadlines: 0, inProgress: 3, completed: 8 },
-        guests: []
+        guests: [],
+        categories: [
+            { id: '1', name: 'Esami', color: 'bg-red-300' },
+            { id: '2', name: 'Progetti', color: 'bg-yellow-300' },
+            { id: '6', name: 'Materiale', color: 'bg-pink-300' }
+        ]
     },
     {
         id: 3,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
     {
         id: 4,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
     {
         id: 5,
         title: "Università",
         description: "Gestione esami, scadenze accademiche e materiale di studio.",
-        category: "university",
+        icon: "university",
         theme: "blue",
         stats: { deadlines: 2, inProgress: 5, completed: 12 },
-        guests: ["marco.rossi@studenti.it"]
+        guests: ["marco.rossi@studenti.it"],
+        categories: []
     },
     {
         id: 6,
         title: "Personale & Hobby",
         description: "Lista della spesa, obiettivi palestra e film da vedere.",
-        category: "personal",
+        icon: "personal",
         theme: "green",
         stats: { deadlines: 0, inProgress: 3, completed: 8 },
-        guests: []
+        guests: [],
+        categories: []
     },
     {
         id: 7,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
     {
         id: 8,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
     {
         id: 9,
         title: "Università",
         description: "Gestione esami, scadenze accademiche e materiale di studio.",
-        category: "university",
+        icon: "university",
         theme: "blue",
         stats: { deadlines: 2, inProgress: 5, completed: 12 },
-        guests: ["marco.rossi@studenti.it"]
+        guests: ["marco.rossi@studenti.it"],
+        categories: []
     },
     {
         id: 10,
         title: "Personale & Hobby",
         description: "Lista della spesa, obiettivi palestra e film da vedere.",
-        category: "personal",
+        icon: "personal",
         theme: "green",
         stats: { deadlines: 0, inProgress: 3, completed: 8 },
-        guests: []
+        guests: [],
+        categories: []
     },
     {
         id: 11,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
     {
         id: 12,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
     {
         id: 13,
         title: "Università",
         description: "Gestione esami, scadenze accademiche e materiale di studio.",
-        category: "university",
+        icon: "university",
         theme: "blue",
         stats: { deadlines: 2, inProgress: 5, completed: 12 },
-        guests: ["marco.rossi@studenti.it"]
+        guests: ["marco.rossi@studenti.it"],
+        categories: []
     },
     {
         id: 14,
         title: "Personale & Hobby",
         description: "Lista della spesa, obiettivi palestra e film da vedere.",
-        category: "personal",
+        icon: "personal",
         theme: "green",
         stats: { deadlines: 0, inProgress: 3, completed: 8 },
-        guests: []
+        guests: [],
+        categories: []
     },
     {
         id: 15,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "purple",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
     {
         id: 16,
         title: "Progetto di Tesi",
         description: "Ricerca bibliografica e stesura capitoli.",
-        category: "other",
+        icon: "other",
         theme: "orange",
         stats: { deadlines: 1, inProgress: 4, completed: 15 },
-        guests: ["prof.verdi@uni.it"]
+        guests: ["prof.verdi@uni.it"],
+        categories: []
     },
 
 ];
