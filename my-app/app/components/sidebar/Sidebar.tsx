@@ -19,7 +19,7 @@ import {
 import LogoMobile from "@/app/components/logo/logoMobile";
 import LogoDesktop from "@/app/components/logo/logoDesktop";
 import SidebarBoardItem from "@/app/components/sidebar/SidebarBoardItem";
-import CreateBoardDialog, {NewBoardData} from "@/app/components/CreateBoardDialog";
+import CreateBoardDialog, {NewBoardData} from "@/app/components/Board/CreateBoardDialog";
 import {initialBoards} from "@/public/datas";
 import {getClassByTheme} from "@/public/Board";
 import {useFocus} from "@/app/context/FocusContext";
@@ -68,7 +68,7 @@ export default function Sidebar() {
     return (
         <>
             {/* MOBILE HEADER */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center justify-between px-4">
+            <div className="lg:hidden top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center justify-between px-4 fixed">
                 <LogoMobile/>
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

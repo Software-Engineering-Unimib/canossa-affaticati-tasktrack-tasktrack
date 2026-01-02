@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { Plus, Search } from 'lucide-react';
-import EditBoardDialog from "@/app/components/EditBoardDialog";
-import CreateBoardDialog, {NewBoardData} from "@/app/components/CreateBoardDialog";
-import BoardCard from "@/app/components/BoardCard";
+import EditBoardDialog from "@/app/components/Board/EditBoardDialog";
+import CreateBoardDialog, {NewBoardData} from "@/app/components/Board/CreateBoardDialog";
+import BoardCard from "@/app/components/Board/BoardCard";
 import {initialBoards} from "@/public/datas";
 import {Board} from "@/public/Board";
 

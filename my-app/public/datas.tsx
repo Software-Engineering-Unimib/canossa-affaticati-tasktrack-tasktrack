@@ -1,4 +1,5 @@
 import {Board} from "@/public/Board";
+import {Task} from "@/public/Task";
 
 export const initialBoards: Board[] = [
     {
@@ -147,3 +148,72 @@ export const initialBoards: Board[] = [
     },
 
 ];
+
+export const initialTasks: Record<string, Task[]> = {
+    '1': [
+        {
+            id: 't-101',
+            title: 'Studiare Capitoli 1-4 di Analisi',
+            description: 'Fare esercizi a pagina 120.',
+            category: { id: 'c-1', name: 'AAAAAAAAAA', color: 'orange' },
+            priority: 'Alta',
+            columnId: 'todo',
+            dueDate: 'Domani',
+            comments: 2,
+            attachments: 1
+        },
+        {
+            id: 't-102',
+            title: 'Iscrizione Appello sessione invernale',
+            category: { id: 'c-6', name: 'BBBBBBBB', color: 'orange' },
+            priority: 'Urgente',
+            columnId: 'todo',
+            dueDate: 'Oggi',
+            comments: 0,
+            attachments: 0
+        },
+        {
+            id: 't-103',
+            title: 'Progetto di Gruppo (Java)',
+            description: 'Implementare interfaccia grafica.',
+            category: { id: 'c-2', name: 'CCCCCCCC', color: 'blue' },
+            priority: 'Media',
+            columnId: 'inprogress',
+            dueDate: 'Ven 14',
+            comments: 5,
+            attachments: 3
+        },
+        {
+            id: 't-104',
+            title: 'Comprare libri semestre 2',
+            category: { id: 'c-3', name: 'DDDDDDDD', color: 'green' },
+            priority: 'Bassa',
+            columnId: 'done',
+            dueDate: 'Ieri',
+            comments: 0,
+            attachments: 0
+        }
+    ],
+    '2': [
+        {
+            id: 't-201',
+            title: 'Pagare affitto',
+            category: { id: 'c-4', name: 'EEEEEEEE', color: 'green' },
+            priority: 'Urgente',
+            columnId: 'todo',
+            dueDate: 'Oggi',
+            comments: 0,
+            attachments: 1
+        },
+        {
+            id: 't-202',
+            title: 'Fare la spesa settimanale',
+            category: { id: 'c-5', name: 'FFFFFFFF', color: 'purple' },
+            priority: 'Bassa',
+            columnId: 'inprogress',
+            dueDate: 'Domani',
+            comments: 1,
+            attachments: 0
+        }
+    ]
+};

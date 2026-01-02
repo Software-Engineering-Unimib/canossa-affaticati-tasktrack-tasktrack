@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "../globals.css";
 import Sidebar from "@/app/components/sidebar/Sidebar";
 import {FocusProvider} from "@/app/context/FocusContext";
-import FocusOverlay from "@/app/components/FocusOverlay";
+import FocusOverlay from "@/app/components/Focus/FocusOverlay";
 
 
 export const metadata: Metadata = {
@@ -28,7 +28,7 @@ export default function RootLayout({
                 </div>
 
                 {/* Area Principale */}
-                <main className="flex-1 overflow-y-auto relative scroll-smooth flex flex-col">
+                <main className="flex-1 overflow-y-auto relative scroll-smooth flex flex-col pt-16 lg:pt-0">
 
                     {/* L'overlay è posizionato 'absolute' o 'fixed' sopra il contenuto
               ma dentro <main>, così la Sidebar resta cliccabile per spegnerlo. */}
