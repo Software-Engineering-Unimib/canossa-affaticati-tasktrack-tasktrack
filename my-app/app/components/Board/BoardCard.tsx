@@ -6,9 +6,8 @@ import {
     MoreVertical,
     BookOpen
 } from 'lucide-react';
-import {BoardTheme} from "@/public/Board";
 import {categoryBoardIcons, BoardCategory} from "@/public/BoardCategory";
-import {BoardStats, themeCardStyles} from "../../../public/Board";
+import {BoardStats, themeCardStyles, BoardTheme} from "@/public/Board";
 
 export interface BoardCardProps {
     id: string | number;
