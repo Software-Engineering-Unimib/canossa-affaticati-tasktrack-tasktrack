@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useFocus } from '../context/FocusContext';
+import { useFocus } from '../../context/FocusContext';
 import { X, Timer } from 'lucide-react';
 
 export default function FocusOverlay() {

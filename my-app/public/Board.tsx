@@ -39,3 +39,7 @@ export interface BoardStats {
     completed: number;
 }
 
+export function getBoardFromId(boards: Board[], id: string | number): Board | undefined {
+    return boards.find(board => board.id == id);
+}
+
