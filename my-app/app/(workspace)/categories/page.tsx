@@ -32,12 +32,12 @@ export default function WorkspacePage() {
 
             {/* --- HEADER --- */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        Buongiorno, Mario! 👋
-                    </h1>
-                    <p className="text-slate-500 mt-2 text-lg">
-                        Ecco la lista delle tue bacheche e delle categorie create finora.
+                
+                {/* Intestazione */}
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Gestione Categorie</h1>
+                    <p className="text-slate-500 mt-2">
+                        Personalizza le etichette per ogni tua bacheca per organizzare meglio i task.
                     </p>
                 </div>
 

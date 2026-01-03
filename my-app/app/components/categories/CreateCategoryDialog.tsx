@@ -2,20 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Check, Loader2 } from 'lucide-react';
-
-interface CategoryStats {
-    total: number;
-    completed: number;
-}
-
-interface Category {
-    id: string;
-    name: string;
-    color: string;
-    description: string;
-    createdAt: Date;
-    stats: CategoryStats;
-}
+import { Category } from '@/public/Category';
 
 interface CreateCategoryDialogProps {
     isOpen: boolean;
@@ -25,14 +12,14 @@ interface CreateCategoryDialogProps {
 
 // Configurazione colori per il selettore
 const colorOptions: { value: string; label: string; class: string }[] = [
-    { value: 'bg-red-500', label: 'Rosso', class: 'bg-red-500' },
-    { value: 'bg-blue-500', label: 'Blu', class: 'bg-blue-500' },
-    { value: 'bg-green-500', label: 'Verde', class: 'bg-green-500' },
-    { value: 'bg-yellow-500', label: 'Giallo', class: 'bg-yellow-500' },
-    { value: 'bg-purple-500', label: 'Viola', class: 'bg-purple-500' },
-    { value: 'bg-pink-500', label: 'Rosa', class: 'bg-pink-500' },
-    { value: 'bg-orange-500', label: 'Arancione', class: 'bg-orange-500' },
-    { value: 'bg-teal-500', label: 'Teal', class: 'bg-teal-500' },
+    { value: 'bg-red-300', label: 'Rosso', class: 'bg-red-300' },
+    { value: 'bg-blue-300', label: 'Blu', class: 'bg-blue-300' },
+    { value: 'bg-green-300', label: 'Verde', class: 'bg-green-300' },
+    { value: 'bg-yellow-300', label: 'Giallo', class: 'bg-yellow-300' },
+    { value: 'bg-purple-300', label: 'Viola', class: 'bg-purple-300' },
+    { value: 'bg-pink-300', label: 'Rosa', class: 'bg-pink-300' },
+    { value: 'bg-orange-300', label: 'Arancione', class: 'bg-orange-300' },
+    { value: 'bg-teal-300', label: 'Teal', class: 'bg-teal-300' },
 ];
 
 export default function CreateCategoryDialog({
@@ -42,8 +29,7 @@ export default function CreateCategoryDialog({
 }: CreateCategoryDialogProps) {
   // Stati del Form
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedColor, setSelectedColor] = useState('bg-red-500');
+  const [selectedColor, setSelectedColor] = useState('bg-red-300');
   const [isLoading, setIsLoading] = useState(false);
 
   // Se il dialog è chiuso, non renderizzare nulla
@@ -60,9 +46,6 @@ export default function CreateCategoryDialog({
         id: Date.now().toString(),
         name: name.trim(),
         color: selectedColor,
-        description: description.trim(),
-        createdAt: new Date(),
-        stats: { total: 0, completed: 0 },
     };
 
     onAdd(newCategory);
@@ -73,8 +56,7 @@ export default function CreateCategoryDialog({
 
   const resetForm = () => {
     setName('');
-    setDescription('');
-    setSelectedColor('bg-red-500');
+    setSelectedColor('bg-red-300');
   };
 
   return (
@@ -97,36 +79,21 @@ export default function CreateCategoryDialog({
             {/* Body Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
 
-                {/* 1. Nome e Descrizione */}
-                <div className="space-y-4">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-1">
-                            Nome Categoria <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            id="name"
-                            type="text"
-                            required
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Es. Lavoro, Università..."
-                            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="desc" className="block text-sm font-semibold text-slate-700 mb-1">
-                            Descrizione <span className="text-slate-400 font-normal">(Opzionale)</span>
-                        </label>
-                        <textarea
-                            id="desc"
-                            rows={3}
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="A cosa serve questa categoria?"
-                            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm resize-none"
-                        />
-                    </div>
+                {/* Nome Categoria */}
+                <div>
+                    <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-1">
+                        Nome Categoria <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        id="name"
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Es. Lavoro, Università..."
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                        autoFocus
+                    />
                 </div>
 
                 {/* 2. Colore */}
