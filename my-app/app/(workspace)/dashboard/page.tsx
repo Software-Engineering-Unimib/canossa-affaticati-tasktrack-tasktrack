@@ -31,7 +31,8 @@ export default function WorkspacePage() {
             title: data.title,
             description: data.description,
             theme: data.theme,
-            category: 'personal', // Default, potresti aggiungerlo al form di creazione
+            icon: 'personal', // Default, potresti aggiungerlo al form di creazione
+            categories: data.categories,
             stats: { deadlines: 0, inProgress: 0, completed: 0 },
             guests: data.guests
         };

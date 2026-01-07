@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Trash2, Check, Loader2, Save, LayoutGrid, ChevronDown } from 'lucide-react';
 import { Board, BoardTheme, themeBoardOptions } from "@/public/Board";
-import { BoardCategory, categoryBoardOptions } from '@/public/BoardCategory';
+import { Icon, iconBoardOptions } from '@/public/BoardIcon';
 
 interface EditBoardDialogProps {
     isOpen: boolean;
@@ -24,7 +24,7 @@ export default function EditBoardDialog({
     // Stati del Form
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<BoardCategory>('personal'); // Nuovo Stato
+    const [selectedIcon, setSelectedIcon] = useState<Icon>('personal'); // Nuovo Stato
     const [selectedTheme, setSelectedTheme] = useState<BoardTheme>('blue');
     const [guests, setGuests] = useState<string[]>([]);
     const [guestEmail, setGuestEmail] = useState('');
@@ -36,7 +36,7 @@ export default function EditBoardDialog({
         if (isOpen && initialData) {
             setTitle(initialData.title);
             setDescription(initialData.description || '');
-            setSelectedCategory(initialData.category); // Sincronizza categoria
+            setSelectedIcon(initialData.icon); // Sincronizza icona
             setSelectedTheme(initialData.theme);
             setGuests(initialData.guests || []);
             setShowDeleteConfirm(false);
@@ -68,7 +68,7 @@ export default function EditBoardDialog({
             ...initialData,
             title,
             description,
-            category: selectedCategory, // Invia la categoria aggiornata
+            icon: selectedIcon, // Invia l'icona aggiornata
             theme: selectedTheme,
             guests
         });
@@ -135,20 +135,20 @@ export default function EditBoardDialog({
                             </div>
 
                             <div>
-                                <label htmlFor="edit-category" className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Categoria
+                                <label htmlFor="edit-icon" className="block text-sm font-semibold text-slate-700 mb-1">
+                                    Icona
                                 </label>
                                 <div className="relative">
                                     {/* Icona sinistra */}
                                     <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
 
                                     <select
-                                        id="edit-category"
-                                        value={selectedCategory}
-                                        onChange={(e) => setSelectedCategory(e.target.value as BoardCategory)}
+                                        id="edit-icon"
+                                        value={selectedIcon}
+                                        onChange={(e) => setSelectedIcon(e.target.value as Icon)}
                                         className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm bg-white appearance-none text-slate-700 font-medium cursor-pointer hover:bg-slate-50"
                                     >
-                                        {categoryBoardOptions.map((option) => (
+                                        {iconBoardOptions.map((option) => (
                                             <option key={option.value} value={option.value}>
                                                 {option.label}
                                             </option>

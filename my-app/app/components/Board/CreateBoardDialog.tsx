@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { X, UserPlus, Trash2, Check, Loader2, LayoutGrid, ChevronDown } from 'lucide-react';
 // Assicurati che il percorso di importazione sia corretto per il tuo progetto
 import { themeBoardOptions, BoardTheme } from "@/public/Board";
-import { BoardCategory, categoryBoardOptions } from '@/public/BoardCategory';
+import { Icon, iconBoardOptions } from '@/public/BoardIcon';
+import { Category } from '@/public/Category';
 
 interface CreateBoardDialogProps {
     isOpen: boolean;
@@ -16,7 +17,8 @@ interface CreateBoardDialogProps {
 export interface NewBoardData {
     title: string;
     description: string;
-    category: BoardCategory;
+    icon: Icon;
+    categories: Category[];
     theme: BoardTheme;
     guests: string[];
 }
@@ -26,7 +28,7 @@ export default function CreateBoardDialog({ isOpen, onClose, onCreate }: CreateB
     // Stati del Form
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<BoardCategory>('personal'); // Stato Categoria
+    const [selectedIcon, setSelectedIcon] = useState<Icon>('personal'); // Stato Categoria
     const [selectedTheme, setSelectedTheme] = useState<BoardTheme>('blue');
     const [guestEmail, setGuestEmail] = useState('');
     const [guests, setGuests] = useState<string[]>([]);
@@ -57,7 +59,8 @@ export default function CreateBoardDialog({ isOpen, onClose, onCreate }: CreateB
         onCreate({
             title,
             description,
-            category: selectedCategory, // Passiamo la categoria selezionata
+            icon: selectedIcon, // Passiamo la categoria selezionata
+            categories: [],
             theme: selectedTheme,
             guests
         });
@@ -70,7 +73,7 @@ export default function CreateBoardDialog({ isOpen, onClose, onCreate }: CreateB
     const resetForm = () => {
         setTitle('');
         setDescription('');
-        setSelectedCategory('personal'); // Reset al default
+        setSelectedIcon('personal'); // Reset al default
         setSelectedTheme('blue');
         setGuests([]);
         setGuestEmail('');
@@ -129,7 +132,7 @@ export default function CreateBoardDialog({ isOpen, onClose, onCreate }: CreateB
                             </div>
 
                             <div>
-                                <label htmlFor="category" className="block text-sm font-semibold text-slate-700 mb-1">
+                                <label htmlFor="icon" className="block text-sm font-semibold text-slate-700 mb-1">
                                     Categoria
                                 </label>
                                 <div className="relative">
@@ -137,12 +140,12 @@ export default function CreateBoardDialog({ isOpen, onClose, onCreate }: CreateB
                                     <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
 
                                     <select
-                                        id="category"
-                                        value={selectedCategory}
-                                        onChange={(e) => setSelectedCategory(e.target.value as BoardCategory)}
+                                        id="icon"
+                                        value={selectedIcon}
+                                        onChange={(e) => setSelectedIcon(e.target.value as Icon)}
                                         className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm bg-white appearance-none text-slate-700 font-medium cursor-pointer hover:bg-slate-50"
                                     >
-                                        {categoryBoardOptions.map((option) => (
+                                        {iconBoardOptions.map((option) => (
                                             <option key={option.value} value={option.value}>
                                                 {option.label}
                                             </option>
