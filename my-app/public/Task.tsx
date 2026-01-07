@@ -1,4 +1,4 @@
-import { Priority } from "./Priority";
+import { PriorityLevel } from "./Priority";
 import { Category } from "./Category";
 
 export type ColumnId = 'todo' | 'inprogress' | 'done';
@@ -8,7 +8,7 @@ export interface Task {
     title: string;
     description?: string;
     category: Category;
-    priority: Priority;
+    priority: PriorityLevel;
     columnId: ColumnId;
     dueDate: string;
     assignees?: string[];

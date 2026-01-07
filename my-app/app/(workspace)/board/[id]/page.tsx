@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, use } from 'react';
 import { Task, ColumnId, ColumnData } from '@/public/Task';
-import { Priority, getPriorityStyles } from '@/public/Priority';
+import { getPriorityStyles } from '@/public/Priority';
 import { themeCategoryOptions } from '@/public/Category';
 import { initialTasks, initialBoards } from '@/public/datas';
 import { getBoardFromId } from '@/public/Board';
