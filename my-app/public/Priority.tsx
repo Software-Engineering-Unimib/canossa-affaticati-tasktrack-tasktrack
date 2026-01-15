@@ -28,10 +28,6 @@ export interface PriorityConfig {
     reminders: Reminder[];
 }
 
-// --- DATI INIZIALI (MOCK) ---
-
-
-
 // Opzioni per la select unità
 export const unitOptions: { value: TimeUnit; label: string }[] = [
     { value: 'minutes', label: 'Minuti prima' },
