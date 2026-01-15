@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e
         env:
           # Necessario per decorare le PR con i commenti di Sonar
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
