@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - master
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -14,13 +15,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Disabilita shallow clone per una migliore rilevanza dell'analisi
           fetch-depth: 0
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@ba3875ecf642b2129de2b589510c81a8b53dbf4e
         env:
-          # Necessario per decorare le PR con i commenti di Sonar
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Il token che hai salvato nei segreti del repo
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          # Aggiungi questa sezione 'args'
+          # Sostituisci YOUR_ORG e YOUR_PROJECT_KEY con i tuoi dati reali
+          args: >
+            -Dsonar.organization=software-engineering-unimib
+            -Dsonar.projectKey=Software-Engineering-Unimib_canossa-affaticati-tasktrack-tasktrack
+            -Dsonar.sources=my-app
+            -Dsonar.exclusions=**/node_modules/**,**/.next/**
