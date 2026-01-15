@@ -1,0 +1,26 @@
+name: SonarCloud Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  sonarcloud:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Disabilita shallow clone per una migliore rilevanza dell'analisi
+          fetch-depth: 0
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          # Necessario per decorare le PR con i commenti di Sonar
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Il token che hai salvato nei segreti del repo
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
