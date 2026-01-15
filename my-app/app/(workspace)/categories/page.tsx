@@ -6,6 +6,7 @@ import EditCategoryDialog from "@/app/components/categories/EditCategoryDialog";
 import {initialBoards} from "@/public/datas";
 import {Board} from "@/public/Board";
 import CategoryCard from '@/app/components/categories/CategoryCard';
+import { Tags } from 'lucide-react';
 
 export default function WorkspacePage() {
     // --- STATI ---
@@ -35,7 +36,10 @@ export default function WorkspacePage() {
                 
                 {/* Intestazione */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Gestione Categorie</h1>
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                        <Tags className="w-8 h-8 text-blue-600" />
+                        Gestione Categorie
+                    </h1>
                     <p className="text-slate-500 mt-2">
                         Personalizza le etichette per ogni tua bacheca per organizzare meglio i task.
                     </p>

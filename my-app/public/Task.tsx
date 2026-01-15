@@ -7,10 +7,10 @@ export interface Task {
     id: string;
     title: string;
     description?: string;
-    category: Category;
+    categories: Category[];
     priority: PriorityLevel;
     columnId: ColumnId;
-    dueDate: string;
+    dueDate: Date;
     assignees?: string[];
     comments: number;
     attachments: number;

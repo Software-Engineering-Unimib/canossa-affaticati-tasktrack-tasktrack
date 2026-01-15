@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Category } from '@/public/Category';
+import {themeCategoryOptions} from "../../../public/Category";
 
 interface EditSingleCategoryDialogProps {
     isOpen: boolean;
@@ -11,16 +12,6 @@ interface EditSingleCategoryDialogProps {
     onSave: (updatedCategory: Category) => void;
 }
 
-const colorOptions: { value: string; label: string; class: string }[] = [
-    { value: 'bg-red-300', label: 'Rosso', class: 'bg-red-300' },
-    { value: 'bg-blue-300', label: 'Blu', class: 'bg-blue-300' },
-    { value: 'bg-green-300', label: 'Verde', class: 'bg-green-300' },
-    { value: 'bg-yellow-300', label: 'Giallo', class: 'bg-yellow-300' },
-    { value: 'bg-purple-300', label: 'Viola', class: 'bg-purple-300' },
-    { value: 'bg-pink-300', label: 'Rosa', class: 'bg-pink-300' },
-    { value: 'bg-orange-300', label: 'Arancione', class: 'bg-orange-300' },
-    { value: 'bg-teal-300', label: 'Teal', class: 'bg-teal-300' },
-];
 
 export default function EditSingleCategoryDialog({
     isOpen,
@@ -83,7 +74,7 @@ export default function EditSingleCategoryDialog({
                             Colore
                         </label>
                         <div className="flex gap-2 flex-wrap">
-                            {colorOptions.map((colorOption) => (
+                            {themeCategoryOptions.map((colorOption) => (
                                 <button
                                     key={colorOption.value}
                                     type="button"

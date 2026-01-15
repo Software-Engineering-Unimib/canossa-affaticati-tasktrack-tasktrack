@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Check, Loader2 } from 'lucide-react';
-import { Category } from '@/public/Category';
+import { Category, themeCategoryOptions } from '@/public/Category';
 
 interface CreateCategoryDialogProps {
     isOpen: boolean;
@@ -10,17 +10,6 @@ interface CreateCategoryDialogProps {
     onAdd: (category: Category) => void;
 }
 
-// Configurazione colori per il selettore
-const colorOptions: { value: string; label: string; class: string }[] = [
-    { value: 'bg-red-300', label: 'Rosso', class: 'bg-red-300' },
-    { value: 'bg-blue-300', label: 'Blu', class: 'bg-blue-300' },
-    { value: 'bg-green-300', label: 'Verde', class: 'bg-green-300' },
-    { value: 'bg-yellow-300', label: 'Giallo', class: 'bg-yellow-300' },
-    { value: 'bg-purple-300', label: 'Viola', class: 'bg-purple-300' },
-    { value: 'bg-pink-300', label: 'Rosa', class: 'bg-pink-300' },
-    { value: 'bg-orange-300', label: 'Arancione', class: 'bg-orange-300' },
-    { value: 'bg-teal-300', label: 'Teal', class: 'bg-teal-300' },
-];
 
 export default function CreateCategoryDialog({
     isOpen,
@@ -102,7 +91,7 @@ export default function CreateCategoryDialog({
                         Scegli un colore
                     </label>
                     <div className="flex gap-3 flex-wrap">
-                        {colorOptions.map((color) => (
+                        {themeCategoryOptions.map((color) => (
                             <button
                                 key={color.value}
                                 type="button"

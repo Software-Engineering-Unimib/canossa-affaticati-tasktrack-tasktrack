@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Save, Trash2, Edit2, Plus } from 'lucide-react';
 import { Board } from "@/public/Board";
-import { Category } from '@/public/Category';
+import { Category, getCategoryColorClass} from '@/public/Category';
 import EditSingleCategoryDialog from './EditSingleCategoryDialog';
 import CreateCategoryDialog from './CreateCategoryDialog';
 
@@ -92,7 +92,7 @@ export default function EditCategoryDialog({
                                 {categories.map((category) => (
                                     <div
                                         key={category.id}
-                                        className={`${category.color} group flex items-center justify-between gap-2 backdrop-blur-sm text-xs text-black font-medium px-3 py-2.5 rounded-lg border border-black/10 transition-all hover:shadow-md`}
+                                        className={`${getCategoryColorClass(category.color)} group flex items-center justify-between gap-2 backdrop-blur-sm text-xs text-black font-medium px-3 py-2.5 rounded-lg border border-black/10 transition-all hover:shadow-md`}
                                     >
                                         <span className="flex-1">{category.name}</span>
                                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
