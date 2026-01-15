@@ -7,6 +7,8 @@ const UserSchema = new Schema({
     password: { type: String, select: false },
     createdAt: { type: Date, default: Date.now },
     initialsName: { type: String, required: true },
+}, {
+    collection: 'Users' // <--- AGGIUNGI QUESTO (metti il nome esatto che vedi su Atlas)
 });
 
 // Evita di ricompilare il modello se esiste già (Next.js hot reload)
