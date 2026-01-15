@@ -9,7 +9,7 @@ import {
     AlertCircle,
     CalendarDays
 } from 'lucide-react';
-import { Task } from '@/public/Task';
+import { Task } from '@/app/types/Task';
 import { getPriorityStyles } from '@/public/Priority';
 import { themeCategoryOptions } from '@/public/Category';
 
@@ -41,7 +41,7 @@ export default function TaskCard({ task, isDragging, onDragStart, onClick }: Tas
     return (
         <div
             draggable
-            onDragStart={(e) => onDragStart(e, task.id)}
+            onDragStart={(e) => onDragStart(e, task._id!)}
             onClick={() => onClick(task)}
             className={`
                 group bg-white p-4 rounded-xl shadow-sm border border-slate-100 cursor-pointer hover:shadow-md transition-all relative

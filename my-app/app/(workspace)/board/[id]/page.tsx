@@ -9,9 +9,9 @@ import {
 } from 'lucide-react';
 
 // Importazione Tipi e Dati
-import { Task, ColumnId, ColumnData } from '@/public/Task';
+import { Task, ColumnId, ColumnData } from '@/app/types/Task';
 import { PriorityLevel } from '@/public/Priority';
-import { initialTasks, initialBoards } from '@/public/datas';
+import { initialBoards } from '@/public/datas';
 import { getBoardFromId } from '@/public/Board';
 
 // Importazione Componenti Custom
@@ -64,10 +64,29 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 
     // Caricamento Dati Iniziali
     useEffect(() => {
-        const initialData = initialTasks[id] || [];
-        setTasks(initialData);
-        setBoardTitle(board ? board.title : 'Board Non Trovata');
-    }, [id, board]);
+    setBoardTitle(board ? board.title : 'Board Non Trovata');
+    
+    const fetchTasks = async () => {
+        try {
+            const response = await fetch(`/api/boards/${id}/tasks`);
+            const data = await response.json();
+
+            // Controllo di sicurezza: se data è un array, lo imposti. 
+            // Altrimenti imposti un array vuoto per evitare il crash di .filter()
+            if (Array.isArray(data)) {
+                setTasks(data);
+            } else {
+                console.error("I dati ricevuti non sono un array:", data);
+                setTasks([]); 
+            }
+        } catch (error) {
+            console.error("Errore nel recupero dei task:", error);
+            setTasks([]);
+        }
+    };
+
+    fetchTasks();
+}, [id, board]);
 
     // --- LOGICA FILTRAGGIO ---
     const filteredTasks = useMemo(() => {
@@ -122,7 +141,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
         if (!draggedTaskId) return;
 
         setTasks(prev => prev.map(task => {
-            if (task.id === draggedTaskId) {
+            if (task._id === draggedTaskId) {
                 return { ...task, columnId: targetColumn };
             }
             return task;
@@ -140,12 +159,12 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 
     // Salvataggio Modifica
     const handleSaveTask = (updatedTask: Task) => {
-        setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+        setTasks(prev => prev.map(t => t._id === updatedTask._id ? updatedTask : t));
     };
 
     // Eliminazione
     const handleDeleteTask = (taskId: string) => {
-        setTasks(prev => prev.filter(t => t.id !== taskId));
+        setTasks(prev => prev.filter(t => t._id !== taskId));
     };
 
     // Creazione Nuovo Task
@@ -337,9 +356,9 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
                                     ) : (
                                         sortedColTasks.map(task => (
                                             <TaskCard
-                                                key={task.id}
+                                                key={task._id}
                                                 task={task}
-                                                isDragging={draggedTaskId === task.id}
+                                                isDragging={draggedTaskId === task._id}
                                                 onDragStart={handleDragStart}
                                                 onClick={handleTaskClick}
                                             />
@@ -365,6 +384,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
             {/* MODALE DI CREAZIONE TASK */}
             <CreateTaskDialog
                 isOpen={isCreateTaskOpen}
+                boardId={id}
                 boardCategories={board ? board.categories : []}
                 onClose={() => setIsCreateTaskOpen(false)}
                 onCreate={handleCreateTask}

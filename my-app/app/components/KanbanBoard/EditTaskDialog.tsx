@@ -17,7 +17,7 @@ import {
     FileText,
     UploadCloud
 } from 'lucide-react';
-import { Task } from '@/public/Task';
+import { Task } from '@/app/types/Task';
 import { PriorityLevel, getPriorityStyles } from '@/public/Priority';
 import { Category, themeCategoryOptions } from '@/public/Category';
 
@@ -170,11 +170,11 @@ export default function EditTaskDialog({
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white z-10">
                     <div className="flex items-center gap-2 text-slate-500">
                         <Layout className="w-5 h-5" />
-                        <span className="text-sm font-medium">Modifica Task / {task.id}</span>
+                        <span className="text-sm font-medium">Modifica Task / {task._id}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() => { onDelete(task.id); onClose(); }}
+                            onClick={() => { onDelete(task._id!); onClose(); }}
                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                             title="Elimina Task"
                         >

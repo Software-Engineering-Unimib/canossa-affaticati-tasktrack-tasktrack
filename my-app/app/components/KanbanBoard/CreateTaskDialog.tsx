@@ -2,26 +2,14 @@
 
 import React, { useState, useRef } from 'react';
 import {
-    X,
-    Save,
-    Calendar,
-    Tag,
-    AlertCircle,
-    AlignLeft,
-    Layout,
-    Check,
-    Paperclip,
-    UploadCloud,
-    FileText,
-    MessageSquare,
-    Send,
-    Columns
+    X, Save, Calendar, Tag, AlertCircle, AlignLeft,
+    Layout, Check, Paperclip, UploadCloud, FileText,
+    MessageSquare, Send, Columns
 } from 'lucide-react';
-import { Task, ColumnId } from '@/public/Task';
+import { Task, ColumnId } from '@/app/types/Task';
 import { PriorityLevel, getPriorityStyles } from '@/public/Priority';
 import { Category, themeCategoryOptions } from '@/public/Category';
 
-// Tipi locali
 interface Attachment {
     id: string;
     name: string;
@@ -40,8 +28,9 @@ interface Comment {
 interface CreateTaskDialogProps {
     isOpen: boolean;
     boardCategories: Category[];
+    boardId: string;
     onClose: () => void;
-    onCreate: (newTask: Task) => void;
+    onCreate: (newTask: Task) => void; // Ora usa l'interfaccia locale
 }
 
 const allPriorities: PriorityLevel[] = ['Bassa', 'Media', 'Alta', 'Urgente'];
@@ -53,32 +42,26 @@ const columnOptions: { id: ColumnId; label: string }[] = [
 ];
 
 export default function CreateTaskDialog({
-                                             isOpen,
-                                             boardCategories,
-                                             onClose,
-                                             onCreate
-                                         }: CreateTaskDialogProps) {
+    isOpen,
+    boardCategories,
+    boardId,
+    onClose,
+    onCreate
+}: CreateTaskDialogProps) {
 
-    // --- STATI FORM ---
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState<PriorityLevel>('Media');
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
     const [dueDate, setDueDate] = useState<string>('');
     const [targetColumn, setTargetColumn] = useState<ColumnId>('todo');
-
-    // --- STATI ACCESSORI (Allegati & Commenti) ---
     const [attachments, setAttachments] = useState<Attachment[]>([]);
-
-    // Sostituiamo initialComment con una lista completa
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!isOpen) return null;
-
-    // --- HANDLERS ---
 
     const toggleCategory = (catId: string) => {
         setSelectedCategoryIds(prev =>
@@ -100,16 +83,15 @@ export default function CreateTaskDialog({
         }
     };
 
-    const handleDeleteAttachment = (fileId: string) => {
-        setAttachments(prev => prev.filter(f => f.id !== fileId));
+    const handleDeleteAttachment = (id: string) => {
+        setAttachments(prev => prev.filter(file => file.id !== id));
     };
 
-    // Gestione Invio Commento (Simile a EditTaskDialog)
     const handleSendComment = () => {
         if (!newComment.trim()) return;
         const comment: Comment = {
             id: `new-c-${Date.now()}`,
-            author: 'Tu', // Autore corrente
+            author: 'Tu',
             text: newComment,
             date: new Date(),
             initials: 'TU'
@@ -118,38 +100,48 @@ export default function CreateTaskDialog({
         setNewComment('');
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const selectedCategories = boardCategories.filter(c => selectedCategoryIds.includes(c.id.toString()));
-
-        const newTask: Task = {
-            id: `t-${Date.now()}`,
+        const taskData: Task = {
             title,
             description,
             priority,
-            categories: selectedCategories,
+            boardId,
             columnId: targetColumn,
             dueDate: dueDate ? new Date(dueDate) : new Date(),
-            comments: comments.length, // Salviamo il numero di commenti inseriti
-            attachments: attachments.length,
-            assignees: []
+            categories: boardCategories.filter(cat => selectedCategoryIds.includes(cat.id)),
+            comments: comments.length,
+            attachments: attachments.length
         };
 
-        onCreate(newTask);
+        try {
+            const response = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(taskData),
+            });
 
-        // Reset Form
-        setTitle('');
-        setDescription('');
-        setPriority('Media');
-        setSelectedCategoryIds([]);
-        setDueDate('');
-        setAttachments([]);
-        setComments([]); // Reset commenti
-        setNewComment('');
-        setTargetColumn('todo');
-
-        onClose();
+            if (response.ok) {
+                const savedTask = await response.json();
+                onCreate(savedTask); // Passa il task creato al genitore
+                
+                // Reset Form
+                setTitle('');
+                setDescription('');
+                setPriority('Media');
+                setSelectedCategoryIds([]);
+                setDueDate('');
+                setAttachments([]);
+                setComments([]);
+                setNewComment('');
+                setTargetColumn('todo');
+                
+                onClose();
+            }
+        } catch (error) {
+            console.error("Errore durante il salvataggio:", error);
+        }
     };
 
     return (
