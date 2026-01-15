@@ -22,11 +22,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          # Aggiungi questa sezione 'args'
-          # Sostituisci YOUR_ORG e YOUR_PROJECT_KEY con i tuoi dati reali
-          args: >
-            -Dsonar.organization=software-engineering-unimib
-            -Dsonar.projectKey=Software-Engineering-Unimib_canossa-affaticati-tasktrack-tasktrack
-            -Dsonar.sources=my-app
-            -Dsonar.exclusions=**/node_modules/**,**/.next/**
