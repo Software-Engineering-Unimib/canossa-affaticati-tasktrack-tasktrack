@@ -11,7 +11,7 @@ import {
     Check,
     Palette,
     ArrowLeft,
-    ChevronRight // Aggiunto ChevronRight che mancava negli import
+    ChevronRight
 } from 'lucide-react';
 import { Category, themeCategoryOptions } from '@/public/Category';
 
@@ -35,12 +35,8 @@ export default function EditCategoryDialog({
 
     // --- STATI INTERNI ---
     const [searchQuery, setSearchQuery] = useState('');
-
     const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
-
-    // CORREZIONE QUI: Uso Category['id'] per evitare mismatch di tipo (string vs number)
     const [editingId, setEditingId] = useState<Category['id'] | null>(null);
-
     const [formName, setFormName] = useState('');
     const [formColor, setFormColor] = useState('blue');
 
@@ -92,8 +88,6 @@ export default function EditCategoryDialog({
         e.preventDefault();
         if (!hasChanges) return;
 
-        // CORREZIONE RIGA 104: Gestione sicura dell'ID
-        // Se siamo in edit usiamo l'ID esistente, altrimenti ne generiamo uno nuovo (stringa)
         const finalId = (mode === 'edit' && editingId !== null)
             ? editingId
             : `cat-${Date.now()}`;
@@ -105,7 +99,6 @@ export default function EditCategoryDialog({
         };
 
         onSaveCategory(newCategory);
-
         setMode('list');
         resetForm();
     };
@@ -122,21 +115,29 @@ export default function EditCategoryDialog({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[600px] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200">
+            {/* Aggiunto 'relative' al container per posizionare il tasto X assoluto.
+            */}
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[600px] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200">
 
-                {/* COLONNA SINISTRA */}
+                {/* --- TASTO CHIUSURA FISSO --- */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 z-50 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors bg-white/80 backdrop-blur-sm md:bg-transparent"
+                    title="Chiudi"
+                >
+                    <X className="w-6 h-6" />
+                </button>
+
+                {/* COLONNA SINISTRA (Lista) */}
                 <div className={`
                     w-full md:w-1/2 flex flex-col border-r border-slate-100 bg-slate-50/50
                     ${mode !== 'list' ? 'hidden md:flex' : 'flex'}
                 `}>
-                    <div className="p-4 border-b border-slate-200/60 bg-white flex justify-between items-center sticky top-0">
+                    <div className="p-4 border-b border-slate-200/60 bg-white flex justify-between items-center sticky top-0 h-[69px]">
                         <div>
                             <h3 className="font-bold text-slate-800">Categorie</h3>
                             <p className="text-xs text-slate-500 truncate max-w-[150px]">{boardName}</p>
                         </div>
-                        <button onClick={onClose} className="md:hidden p-2 text-slate-400 hover:bg-slate-100 rounded-full">
-                            <X className="w-5 h-5" />
-                        </button>
                     </div>
 
                     <div className="p-4 space-y-3">
@@ -189,7 +190,7 @@ export default function EditCategoryDialog({
                     </div>
                 </div>
 
-                {/* COLONNA DESTRA */}
+                {/* COLONNA DESTRA (Form) */}
                 <div className={`
                     w-full md:w-1/2 flex flex-col bg-white
                     ${mode === 'list' ? 'hidden md:flex' : 'flex'}
@@ -202,7 +203,7 @@ export default function EditCategoryDialog({
                                 <span className="text-sm font-medium">Seleziona o crea una categoria</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-3 w-full">
+                            <div className="flex items-center gap-3 w-full pr-8"> {/* pr-8 per evitare sovrapposizione con la X fissa */}
                                 <button onClick={() => setMode('list')} className="md:hidden p-1 -ml-2 text-slate-400 hover:text-slate-700">
                                     <ArrowLeft className="w-5 h-5" />
                                 </button>
@@ -215,9 +216,6 @@ export default function EditCategoryDialog({
                                             <Trash2 className="w-5 h-5" />
                                         </button>
                                     )}
-                                    <button onClick={onClose} className="hidden md:block p-2 text-slate-400 hover:bg-slate-100 rounded-full">
-                                        <X className="w-5 h-5" />
-                                    </button>
                                 </div>
                             </div>
                         )}
