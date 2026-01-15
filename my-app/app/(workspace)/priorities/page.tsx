@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-    Bell,
+    Flag,
     Clock,
     Trash2,
     Plus,
@@ -96,7 +96,7 @@ export default function PrioritiesPage() {
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                        <Bell className="w-8 h-8 text-blue-600" />
+                        <Flag className="w-8 h-8 text-blue-600" />
                         Gestione Priorità & Notifiche
                     </h1>
                     <p className="text-slate-500 mt-2 text-lg">

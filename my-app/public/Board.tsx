@@ -3,7 +3,7 @@ import { Icon } from "@/public/BoardIcon";
 import { Category } from "./Category";
 
 export interface Board {
-    id: string | number;
+    id: string;
     title: string;
     description: string;
     icon: Icon;
