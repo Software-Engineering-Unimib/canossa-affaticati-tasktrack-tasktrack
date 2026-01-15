@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 // Importazione Tipi e Dati
-import { Task, ColumnId, ColumnData } from '@/app/types/Task';
+import { Task, ColumnId, ColumnData } from '@/app/types/task';
 import { PriorityLevel } from '@/public/Priority';
 import { initialBoards } from '@/public/datas';
 import { getBoardFromId } from '@/public/Board';
@@ -44,6 +44,10 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
     // --- STATI DATI ---
     const [tasks, setTasks] = useState<Task[]>([]);
     const [boardTitle, setBoardTitle] = useState('');
+    // Stato per mostrare tutte le task dal database
+    const [allDbTasks, setAllDbTasks] = useState<Task[]>([]);
+    // Stato per mostrare il conteggio utenti
+    const [userCount, setUserCount] = useState<number | null>(null);
 
     // --- STATI UI & INTERAZIONE ---
     const [searchQuery, setSearchQuery] = useState('');
@@ -87,6 +91,24 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 
     fetchTasks();
 }, [id, board]);
+
+    // Fetch di tutte le task dal database per test connessione
+    useEffect(() => {
+        fetch('/api/all-tasks')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setAllDbTasks(data);
+            });
+    }, []);
+
+    // Fetch del conteggio utenti
+    useEffect(() => {
+        fetch('/api/all-users')
+            .then(res => res.json())
+            .then(data => {
+                if (typeof data.count === 'number') setUserCount(data.count);
+            });
+    }, []);
 
     // --- LOGICA FILTRAGGIO ---
     const filteredTasks = useMemo(() => {
@@ -390,6 +412,22 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
                 onCreate={handleCreateTask}
             />
 
+            {/* TEST: Visualizza tutte le task dal database */}
+            <div className="mb-4 p-2 border rounded bg-gray-100">
+                <h2 className="font-bold mb-2">Tutte le Task nel Database</h2>
+                <ul>
+                    {allDbTasks.map(task => (
+                        <li key={task._id} className="text-sm">
+                            <span className="font-semibold">{task.title}</span> - {task.description}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            {/* TEST: Visualizza il numero di utenti nel database */}
+            <div className="mb-4 p-2 border rounded bg-blue-100">
+                <h2 className="font-bold mb-2">Numero utenti nel Database</h2>
+                <p>{userCount !== null ? userCount : 'Caricamento...'}</p>
+            </div>
         </div>
     );
 }

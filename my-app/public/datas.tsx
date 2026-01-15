@@ -50,7 +50,7 @@ export const initialPriorities: PriorityConfig[] = [
 // --- DATI BACHECHE (BOARDS) ---
 export const initialBoards: Board[] = [
     {
-        id: '1',
+        id: '6968c5c4634743f90865ffe1',
         title: 'Università',
         description: 'Gestione esami, scadenze accademiche e materiale di studio.',
         icon: 'university',

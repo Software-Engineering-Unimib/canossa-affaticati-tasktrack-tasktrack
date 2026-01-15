@@ -1,133 +1,101 @@
 # AI Coding Assistant Instructions for TaskTrack
 
-## Project Overview
-TaskTrack is a Next.js 16 + React 19 task management application with Kanban board functionality, built with TypeScript, Tailwind CSS 4, and MongoDB for persistent storage.
+## Quick Start
 
-## Architecture
+**Development**: `cd my-app && npm run dev` → http://localhost:3000
+**Build/Lint**: `npm run build`, `npm run start`, `npm run lint`
+**Database**: Requires `MONGODB_URI` environment variable
 
-### Tech Stack
-- **Frontend**: Next.js 16, React 19, TypeScript
-- **Styling**: Tailwind CSS 4, clsx/tailwind-merge for conditional classes
-- **Database**: MongoDB (Mongoose ODM)
-- **Icons**: Lucide-react, HugeIcons
-- **UI Pattern**: Path aliasing via `@/*` → `./` (defined in `tsconfig.json`)
+**Key Files**:
+- [app/types/task.tsx](app/types/task.tsx) – Task interface & ColumnId union type
+- [models/Task.ts](models/Task.ts) – Mongoose schema definition
+- [lib/mongodb.ts](lib/mongodb.ts) – MongoDB singleton connection
+- [app/(workspace)/layout.tsx](app/(workspace)/layout.tsx) – Workspace root with FocusProvider
 
-### Directory Structure
+## Architecture Overview
+
+**Stack**: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4 + MongoDB (Mongoose)
+
+**Three-Layer Structure**:
+1. **UI Layer**: React components (`app/components/`) with `'use client'` for interactive features
+2. **API Layer**: Next.js route handlers (`app/api/`) following pattern: connect MongoDB → query → return JSON
+3. **Data Layer**: Mongoose schemas (`models/`) + type definitions (`app/types/`)
+
+**Layout Hierarchy**:
+- `app/layout.tsx` (root, sets metadata)
+  - `app/(auth)/layout.tsx` (login/register, no sidebar)
+  - `app/(workspace)/layout.tsx` (protected routes wrapped with FocusProvider, Sidebar, FocusOverlay)
+
+## Core Patterns
+
+### Kanban Board
+- **Fixed columns**: `columnId` in Task schema uses union type: `'todo' | 'inprogress' | 'done'`
+- **Board discovery**: Pages reference dynamic route `board/[id]` which fetches tasks via `GET /api/boards/[boardId]/tasks`
+- **Focus Mode**: Global state via `FocusContext` (timer tracking seconds elapsed); overlay visibility controlled by context value
+
+### Mongoose + API Routes
+**Connection Pattern** (in every API route):
+```typescript
+import connectMongoDB from '@/lib/mongodb';
+await connectMongoDB();
+const data = await Task.find({ /* query */ });
 ```
-app/
-  ├── (auth)/           # Authentication routes (login, register)
-  ├── (workspace)/      # Protected routes with Sidebar layout
-  │   ├── board/[id]/   # Kanban board view (dynamic route)
-  │   ├── dashboard/    # Overview/home page
-  │   ├── categories/   # Category management
-  │   └── priorities/   # Priority management
-  ├── api/              # Route handlers (Next.js App Router)
-  │   ├── boards/[boardId]/tasks/
-  │   ├── tasks/
-  │   └── utente/
-  ├── components/       # React components (6 subdirectories below)
-  ├── context/          # React Context (FocusContext for focus mode)
-  └── types/            # TypeScript interfaces (task.tsx)
-lib/
-  ├── mongodb.ts        # MongoDB connection singleton
-  └── utils.ts          # Utility functions (e.g., `cn()` for class merging)
-models/
-  ├── Task.ts           # Mongoose Task schema with timestamps
-public/
-  ├── datas.tsx         # Mock data (initialBoards)
-  ├── Board.tsx         # Board utilities (getClassByTheme)
-  ├── Category.tsx      # Category type definitions
-  └── Priority.tsx      # Priority enum/type
-```
-
-## Key Components & Patterns
-
-### Kanban Board Architecture
-- **Columns**: Fixed columnId values (`'todo'`, `'inprogress'`, `'done'`) in Task schema
-- **Workspace Layout** (`(workspace)/layout.tsx`): Wraps child pages with Sidebar, FocusProvider, and FocusOverlay
-- **Sidebar** (`components/sidebar/Sidebar.tsx`): Client-only (`'use client'`), handles navigation, logout, focus mode toggle
-- **Focus Mode**: Context-based timer in FocusContext tracking elapsed seconds; overlay rendered by FocusOverlay component
-
-### Task Model
-Located in [models/Task.ts](models/Task.ts):
-- Mongoose schema with fields: `title`, `description`, `boardId` (ref to Board), `categories`, `priority`, `columnId`, `dueDate`, `assignees`, `comments`, `attachments`
-- Auto-timestamps via `{ timestamps: true }`
-- Singleton export: `mongoose.models.Task || mongoose.model("Task", TaskSchema)`
-
-### Data Types
-Located in [app/types/task.tsx](app/types/task.tsx):
-- `Task` interface matches schema fields; optional `_id` for creation
-- `ColumnId = 'todo' | 'inprogress' | 'done'`
-- `ColumnData` for rendering column headers with color theming
-
-### API Routes (Next.js Route Handlers)
-- **POST `/api/tasks`**: Create task from JSON body
-- **GET `/api/boards/[boardId]/tasks`**: Fetch tasks (currently returns all; TODO: filter by boardId)
-- All routes follow: connect → query → return NextResponse.json
-
-## Development Workflow
-
-### Run Development Server
-```bash
-cd my-app && npm run dev
-# or: bun dev
-# Opens http://localhost:3000
+**Dynamic params**: Use `await params` before destructuring (Next.js 15+ requirement).
+Example from [app/api/boards/[boardId]/tasks/route.ts](app/api/boards/[boardId]/tasks/route.ts):
+```typescript
+const { boardId } = await params;
+const tasks = await Task.find({ boardId });
 ```
 
-### Build & Production
-```bash
-npm run build   # Compile for production
-npm run start   # Run production server
+### Component State & Context
+- **Global state**: Focus mode (`isFocusMode`, `toggleFocusMode`, `seconds`) via `FocusProvider` → consumed by Sidebar & FocusOverlay
+- **Local state**: Dialog visibility, form inputs via `useState` in component
+- **Side effects**: Timer logic uses `useEffect` with interval cleanup (see FocusContext pattern)
+
+## Code Conventions
+
+**TypeScript**: Mandatory for `.tsx` / `.ts` files. Import Task interface from `app/types/task.tsx` in API routes.
+
+**React**: 
+- Mark interactive components `'use client'` (Sidebar, dialogs, anything with hooks)
+- Server components (pages) default; use client components sparingly
+- Icons: `lucide-react` preferred (LayoutDashboard, Plus, ChevronRight, etc.)
+
+**Styling**:
+- Use `cn()` utility (`lib/utils.ts`) to merge Tailwind classes: `cn('base', condition && 'variant')`
+- Colors: semantic names (blue-50, gray-100, destructive)
+- Responsive: `lg:` breakpoint for desktop (≥1024px); mobile-first
+- Z-index hierarchy: Sidebar z-40, mobile header z-50, FocusOverlay z-0 (intentionally low to allow Sidebar interaction)
+
+**Error Handling** (API routes):
+```typescript
+try {
+  await connectMongoDB();
+  // query
+  return NextResponse.json(result);
+} catch (error) {
+  return NextResponse.json({ error: 'message' }, { status: 500 });
+}
 ```
-
-### Linting
-```bash
-npm run lint    # ESLint check
-```
-
-## Conventions & Best Practices
-
-### Code Style
-- **TypeScript mandatory** for `.tsx` and `.ts` files
-- **React Compiler enabled** (`reactCompiler: true` in next.config.ts)
-- Use `cn()` utility (`lib/utils.ts`) to merge Tailwind classes conditionally: `cn('base-class', condition && 'conditional-class')`
-- Client components marked with `'use client'` (Sidebar, dialogs, context consumers)
-
-### Tailwind & Styling
-- Import `@import "tailwindcss"` in globals.css; Tailwind 4 with inline theme variables
-- Color palette uses semantic names: `blue-50`, `gray-100`, `destructive`, etc.
-- Responsive breakpoints: `lg:` for desktop (≥1024px), mobile-first design
-- Z-index management: Sidebar `z-40`, mobile header `z-50`, overlay `z-0`
-
-### MongoDB & API Design
-- **Connection**: `lib/mongodb.ts` handles connection singleton (async `connectMongoDB()` function)
-- **API Error Handling**: Wrap in try-catch, return `NextResponse.json(error, { status: 500 })`
-- **Query Filtering**: Route params accessed via `await params` (Next.js 15+) before querying
-
-### Component Patterns
-- **Dialog Components**: `CreateBoardDialog`, `EditBoardDialog`, `EditTaskDialog`, `LogoutDialog` (state in parent)
-- **Navigation**: Use Next.js `Link`, `usePathname()`, `useRouter()` from `next/navigation`
-- **Icons**: Import from `lucide-react` (e.g., `LayoutDashboard`, `Plus`, `ChevronRight`)
-
-### Context & State
-- Global state (focus mode, overlay visibility) via React Context
-- Local component state via `useState` hook
-- Side effects (timers, etc.) via `useEffect` with proper cleanup
 
 ## Critical Integration Points
 
-1. **Sidebar ↔ Layout**: Sidebar rendered in `(workspace)/layout.tsx` with FocusProvider wrapper; focus state controls overlay visibility
-2. **Task Creation**: Dialog in Sidebar → API POST → Sidebar state update (TODO: refactor to async/optimistic)
-3. **Board Navigation**: Dynamic `[id]` routes fetch tasks from `/api/boards/[boardId]/tasks`
-4. **Auth**: `(auth)` folder handles login/register; Sidebar logout navigates to `/login`
+1. **Sidebar ↔ FocusMode**: Sidebar (`use client`) toggles `FocusContext.toggleFocusMode()` → FocusOverlay visibility updates
+2. **Task Creation Flow**: Dialog in Sidebar → POST to `/api/tasks` → state refresh (currently TODO: refactor to optimistic update)
+3. **Board Navigation**: `board/[id]` page fetches tasks from `/api/boards/[boardId]/tasks` endpoint
+4. **Auth Guard**: `(auth)` folder is public; `(workspace)` requires auth (implement via middleware if not present)
 
-## Known Issues / TODOs
-- API `GET /api/boards/[boardId]/tasks` doesn't filter by `boardId`; currently returns all tasks
-- Focus mode timer display not yet implemented in UI
-- Task assignment and attachment features partially stubbed
+## Known Gaps & TODOs
 
-## Debugging Tips
-- Enable Next.js Server Logs: Terminal shows API request paths, database errors
-- MongoDB connection errors: Check `MONGODB_URI` env var and network access
-- Component re-renders: React Compiler enabled; use React DevTools Profiler
-- Missing types: Check `app/types/task.tsx` and import `Task` interface for API responses
+- **API filtering**: `GET /api/boards/[boardId]/tasks` returns all tasks (should filter by `boardId` ObjectId)
+- **Focus UI**: Timer value in FocusContext exists but display in UI not implemented
+- **Assignees/Attachments**: Schema fields present but UI partially stubbed
+- **Mongoose connection caching**: Uses global cache pattern; test for connection leaks under load
+
+## Debugging Checklist
+
+- **MongoDB errors**: Verify `MONGODB_URI` env var, network access, connection string format
+- **API params**: Always use `await params` in dynamic route handlers (common Next.js 15+ gotcha)
+- **Missing types**: Check `app/types/task.tsx`; import `Task` interface in API responses
+- **React rerender issues**: React Compiler enabled; use DevTools Profiler to identify avoidable renders
+- **Sidebar not responsive**: Check `'use client'` declaration; context not accessible in server components
