@@ -2,27 +2,30 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard,
     Tags,
     Flag,
-    Settings,
     Plus,
     ChevronRight,
-    ChevronDown, // Importato ChevronDown
+    ChevronDown,
     Eye,
     Menu,
     X,
-    LucideIcon
+    LucideIcon,
+    LogOut
 } from 'lucide-react';
+
+// Import Componenti e Dati
 import LogoMobile from "@/app/components/logo/logoMobile";
 import LogoDesktop from "@/app/components/logo/logoDesktop";
 import SidebarBoardItem from "@/app/components/sidebar/SidebarBoardItem";
-import CreateBoardDialog, {NewBoardData} from "@/app/components/Board/CreateBoardDialog";
-import {initialBoards} from "@/public/datas";
-import {getClassByTheme} from "@/public/Board";
-import {useFocus} from "@/app/context/FocusContext";
+import CreateBoardDialog, { NewBoardData } from "@/app/components/Board/CreateBoardDialog";
+import LogoutDialog from '@/app/components/auth/LogoutDialog'; // <--- IMPORT DIALOG LOGOUT
+import { initialBoards } from "@/public/datas";
+import { getClassByTheme } from "@/public/Board";
+import { useFocus } from "@/app/context/FocusContext";
 
 interface NavItemProps {
     href: string;
@@ -33,17 +36,39 @@ interface NavItemProps {
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+    const router = useRouter();
 
-    // NUOVO STATO: Gestisce l'apertura/chiusura della sezione bacheche
-    // Inizializzato a 'true' così l'utente vede le bacheche al primo avvio
+    // --- STATI MENU & INTERAZIONE ---
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const [isBoardsOpen, setIsBoardsOpen] = useState<boolean>(true);
 
+    // --- STATI DIALOGS ---
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false); // <--- NUOVO STATO
+
+    // Context Focus Mode
+    const { isFocusMode, toggleFocusMode } = useFocus();
+
+    // Gestione Creazione Bacheca
+    const handleCreateBoard = (data: NewBoardData) => {
+        console.log('Nuova bacheca creata:', data);
+        setIsCreateDialogOpen(false);
+    };
+
+    // Gestione Logout
+    const handleLogout = () => {
+        console.log('Logout effettuato');
+        // Qui inserisci la logica di logout reale (es. clear cookies/token)
+        setIsLogoutDialogOpen(false);
+        router.push('/login');
+    };
+
+    // Componente Link Navigazione
     const NavItem: React.FC<NavItemProps> = ({ href, icon: Icon, label, active = false }) => (
         <Link
             href={href}
             className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 mb-1
-        ${active
+            ${active
                 ? 'bg-blue-50 text-blue-700'
                 : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
             }`}
@@ -53,17 +78,6 @@ export default function Sidebar() {
             {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
         </Link>
     );
-
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-    // Funzione che riceve i dati dal form
-    const handleCreateBoard = (data: NewBoardData) => {
-        console.log('Nuova bacheca creata:', data);
-        // Qui faresti la chiamata al backend o aggiorneresti lo stato locale
-        setIsDialogOpen(false);
-    };
-
-    const { isFocusMode, toggleFocusMode } = useFocus();
 
     return (
         <>
@@ -80,10 +94,10 @@ export default function Sidebar() {
 
             {/* SIDEBAR CONTAINER */}
             <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col
-        lg:translate-x-0 lg:static lg:h-screen
-        ${isMobileMenuOpen ? 'translate-x-0 top-16' : '-translate-x-full top-0 lg:top-0'}
-      `}>
+                fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col
+                lg:translate-x-0 lg:static lg:h-screen
+                ${isMobileMenuOpen ? 'translate-x-0 top-16' : '-translate-x-full top-0 lg:top-0'}
+            `}>
 
                 {/* LOGO AREA */}
                 <LogoDesktop/>
@@ -118,15 +132,13 @@ export default function Sidebar() {
                         </nav>
                     </div>
 
-                    {/* SEZIONE BACHECHE (DROPDOWN MODIFICATA) */}
+                    {/* SEZIONE BACHECHE (ACCORDION) */}
                     <div>
-                        {/* Pulsante Intestazione Accordion */}
                         <button
                             onClick={() => setIsBoardsOpen(!isBoardsOpen)}
                             className="w-full flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2 hover:text-gray-600 transition-colors focus:outline-none"
                         >
                             <span>Le tue Bacheche</span>
-                            {/* Cambia icona in base allo stato */}
                             {isBoardsOpen ? (
                                 <ChevronDown className="w-4 h-4" />
                             ) : (
@@ -134,7 +146,6 @@ export default function Sidebar() {
                             )}
                         </button>
 
-                        {/* Contenuto Condizionale (Lista Bacheche) */}
                         {isBoardsOpen && (
                             <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
                                 {initialBoards.map((board) => (
@@ -146,8 +157,10 @@ export default function Sidebar() {
                                     />
                                 ))}
 
-                                {/* Pulsante "Aggiungi Nuova" dentro la lista (opzionale) */}
-                                <button className="w-full flex items-center px-3 py-2 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-dashed border-gray-200 hover:border-blue-200 mt-2" onClick={() => setIsDialogOpen(true)}>
+                                <button
+                                    className="w-full flex items-center px-3 py-2 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-dashed border-gray-200 hover:border-blue-200 mt-2"
+                                    onClick={() => setIsCreateDialogOpen(true)}
+                                >
                                     <Plus className="w-4 h-4 mr-3" />
                                     <span>Crea nuova bacheca</span>
                                 </button>
@@ -157,9 +170,10 @@ export default function Sidebar() {
 
                 </div>
 
-                {/* BOTTOM SECTION */}
+                {/* BOTTOM SECTION (FOCUS & USER) */}
                 <div className="border-t border-gray-200 p-4 space-y-4 bg-gray-50/50">
 
+                    {/* Toggle Focus Mode */}
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                             <Eye className="w-4 h-4 text-purple-600" />
@@ -177,15 +191,26 @@ export default function Sidebar() {
 
                     <div className="h-px bg-gray-200 my-2"></div>
 
-                    <div className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm cursor-pointer transition-all">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm shrink-0">
-                            MR
+                    {/* Profilo Utente con Logout */}
+                    <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all group">
+                        <div className="flex items-center flex-1 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm shrink-0">
+                                MR
+                            </div>
+                            <div className="ml-3 flex-1 overflow-hidden">
+                                <p className="text-sm font-medium text-gray-900 truncate">Mario Rossi</p>
+                                <p className="text-xs text-gray-500 truncate">mario.r@studenti.it</p>
+                            </div>
                         </div>
-                        <div className="ml-3 flex-1 overflow-hidden">
-                            <p className="text-sm font-medium text-gray-900 truncate">Mario Rossi</p>
-                            <p className="text-xs text-gray-500 truncate">mario.r@studenti.it</p>
-                        </div>
-                        <Settings className="w-4 h-4 text-gray-400 shrink-0" />
+
+                        {/* Tasto Logout */}
+                        <button
+                            onClick={() => setIsLogoutDialogOpen(true)} // <--- APRE DIALOG
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Disconnettiti"
+                        >
+                            <LogOut className="w-4 h-4 shrink-0" />
+                        </button>
                     </div>
 
                 </div>
@@ -200,11 +225,18 @@ export default function Sidebar() {
                 />
             )}
 
-            {/* IL COMPONENTE DIALOG */}
+            {/* DIALOG CREAZIONE BACHECA */}
             <CreateBoardDialog
-                isOpen={isDialogOpen}
-                onClose={() => setIsDialogOpen(false)}
+                isOpen={isCreateDialogOpen}
+                onClose={() => setIsCreateDialogOpen(false)}
                 onCreate={handleCreateBoard}
+            />
+
+            {/* DIALOG LOGOUT */}
+            <LogoutDialog
+                isOpen={isLogoutDialogOpen}
+                onClose={() => setIsLogoutDialogOpen(false)}
+                onConfirm={handleLogout}
             />
         </>
     );
