@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Flag,
     Clock,
@@ -12,33 +12,81 @@ import {
     Loader2
 } from 'lucide-react';
 
-import { PriorityConfig, PriorityLevel, unitOptions } from '@/items/Priority';
-import { initialPriorities } from '@/items/datas';
+// Import Logica e Dati
+import { useAuth } from '@/app/context/AuthContext';
+import { PriorityModel, Reminder } from '@/models/Priority';
+import { unitOptions } from '@/items/Priority'; // Assicurati che esista, altrimenti definiscilo qui sotto
+
+// Definizione dell'interfaccia UI (adattata ai dati DB + stile UI)
+interface UiPriorityConfig {
+    id: number;
+    label: string;
+    description: string;
+    priority_level: string;
+    colorClass: string; // Mappato da color_class
+    bgClass: string;    // Mappato da bg_class
+    reminders: Reminder[];
+}
 
 export default function PrioritiesPage() {
-    // Stato corrente modificabile dall'utente
-    const [priorities, setPriorities] = useState<PriorityConfig[]>(initialPriorities);
+    const { user } = useAuth();
 
-    // NUOVO: Stato di "riferimento" (rappresenta i dati salvati nel DB)
-    const [savedPriorities, setSavedPriorities] = useState<PriorityConfig[]>(initialPriorities);
+    // --- STATI ---
+    const [priorities, setPriorities] = useState<UiPriorityConfig[]>([]);
+    const [savedPriorities, setSavedPriorities] = useState<UiPriorityConfig[]>([]);
 
+    const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-    // NUOVO: Calcoliamo se ci sono differenze tra lo stato corrente e quello salvato
+    // --- CARICAMENTO DATI ---
+    useEffect(() => {
+        const loadData = async () => {
+            if (!user) return;
+            setIsLoading(true);
+            try {
+                const data = await PriorityModel.getAllPriorities();
+
+                // Mappiamo i dati DB (snake_case) ai dati UI (camelCase)
+                const uiData: UiPriorityConfig[] = data.map(p => ({
+                    id: p.id,
+                    priority_level: p.priority_level,
+                    label: p.label,
+                    description: p.description || '',
+                    colorClass: p.color_class,
+                    bgClass: p.bg_class,
+                    // Assicuriamoci che reminders sia un array anche se null
+                    reminders: p.reminders || []
+                }));
+
+                setPriorities(uiData);
+                setSavedPriorities(uiData);
+            } catch (error) {
+                console.error("Errore fetch priorità:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadData();
+    }, [user]);
+
+    // --- CALCOLO DIFFERENZE ---
     const hasChanges = useMemo(() => {
+        // Confronto JSON per rilevare modifiche profonde
         return JSON.stringify(priorities) !== JSON.stringify(savedPriorities);
     }, [priorities, savedPriorities]);
 
-    // --- HANDLERS ---
+    // --- HANDLERS (CRUD Locale) ---
 
-    const addReminder = (priorityId: PriorityLevel) => {
+    const addReminder = (priorityId: number) => {
         setPriorities(prev => prev.map(p => {
             if (p.id === priorityId && p.reminders.length < 3) {
                 return {
                     ...p,
                     reminders: [
                         ...p.reminders,
+                        // Usiamo un ID temporaneo lato client per la key di React
                         { id: `new-${Date.now()}`, value: 1, unit: 'hours' }
                     ]
                 };
@@ -47,7 +95,7 @@ export default function PrioritiesPage() {
         }));
     };
 
-    const removeReminder = (priorityId: PriorityLevel, reminderId: string) => {
+    const removeReminder = (priorityId: number, reminderId: string | number) => {
         setPriorities(prev => prev.map(p => {
             if (p.id === priorityId) {
                 return {
@@ -59,7 +107,12 @@ export default function PrioritiesPage() {
         }));
     };
 
-    const updateReminder = (priorityId: PriorityLevel, reminderId: string, field: 'value' | 'unit', newValue: string | number) => {
+    const updateReminder = (
+        priorityId: number,
+        reminderId: string | number,
+        field: 'value' | 'unit',
+        newValue: string | number
+    ) => {
         setPriorities(prev => prev.map(p => {
             if (p.id === priorityId) {
                 return {
@@ -76,18 +129,39 @@ export default function PrioritiesPage() {
         }));
     };
 
+    // --- SALVATAGGIO SU DB ---
     const handleSaveAll = async () => {
-        if (!hasChanges) return; // Blocco di sicurezza extra
+        if (!hasChanges) return;
 
         setIsSaving(true);
-        // Simulazione chiamata API
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            // Salviamo i promemoria per ogni priorità modificata
+            // (Per semplicità salviamo tutto, ma potresti filtrare solo quelle cambiate)
+            const promises = priorities.map(p =>
+                PriorityModel.syncReminders(p.id, p.reminders)
+            );
 
-        setSavedPriorities(priorities);
+            await Promise.all(promises);
 
-        setLastSaved(new Date());
-        setIsSaving(false);
+            // Aggiorniamo lo stato di riferimento
+            setSavedPriorities(priorities);
+            setLastSaved(new Date());
+
+        } catch (error) {
+            console.error("Errore salvataggio:", error);
+            alert("Si è verificato un errore durante il salvataggio.");
+        } finally {
+            setIsSaving(false);
+        }
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex h-full items-center justify-center min-h-[50vh]">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 pb-24">
@@ -107,15 +181,14 @@ export default function PrioritiesPage() {
                 {/* Tasto Salva Principale */}
                 <button
                     onClick={handleSaveAll}
-                    // MODIFICA QUI: Disabilitato se sta salvando OPPURE se non ci sono modifiche
                     disabled={isSaving || !hasChanges}
                     className={`
-            flex items-center gap-2 px-6 py-3 font-bold rounded-xl transition-all shadow-lg 
-            ${hasChanges
+                        flex items-center gap-2 px-6 py-3 font-bold rounded-xl transition-all shadow-lg 
+                        ${hasChanges
                         ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20'
                         : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                     }
-          `}
+                    `}
                 >
                     {isSaving ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -164,8 +237,8 @@ export default function PrioritiesPage() {
                                     Promemoria impostati
                                 </h4>
                                 <span className="text-xs font-medium text-slate-400">
-                        {priority.reminders.length} / 3
-                    </span>
+                                    {priority.reminders.length} / 3
+                                </span>
                             </div>
 
                             {priority.reminders.length === 0 ? (
@@ -182,7 +255,7 @@ export default function PrioritiesPage() {
                                                 min="1"
                                                 max="365"
                                                 value={reminder.value}
-                                                onChange={(e) => updateReminder(priority.id, reminder.id, 'value', parseInt(e.target.value) || 0)}
+                                                onChange={(e) => updateReminder(priority.id, reminder.id!, 'value', parseInt(e.target.value) || 0)}
                                                 className="w-20 px-3 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                                             />
 
@@ -190,7 +263,7 @@ export default function PrioritiesPage() {
                                             <div className="relative flex-1">
                                                 <select
                                                     value={reminder.unit}
-                                                    onChange={(e) => updateReminder(priority.id, reminder.id, 'unit', e.target.value)}
+                                                    onChange={(e) => updateReminder(priority.id, reminder.id!, 'unit', e.target.value)}
                                                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none cursor-pointer"
                                                 >
                                                     {unitOptions.map(opt => (
@@ -201,7 +274,7 @@ export default function PrioritiesPage() {
 
                                             {/* Tasto Rimuovi */}
                                             <button
-                                                onClick={() => removeReminder(priority.id, reminder.id)}
+                                                onClick={() => removeReminder(priority.id, reminder.id!)}
                                                 className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                 title="Rimuovi promemoria"
                                             >

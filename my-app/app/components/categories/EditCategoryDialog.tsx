@@ -11,8 +11,11 @@ import {
     Check,
     Palette,
     ArrowLeft,
-    ChevronRight
+    ChevronRight,
+    Loader2
 } from 'lucide-react';
+
+// Import Dati e Tipi dai tuoi file
 import { Category, themeCategoryOptions } from '@/items/Category';
 
 interface EditCategoryDialogProps {
@@ -36,15 +39,20 @@ export default function EditCategoryDialog({
     // --- STATI INTERNI ---
     const [searchQuery, setSearchQuery] = useState('');
     const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
-    const [editingId, setEditingId] = useState<Category['id'] | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    // Form State
     const [formName, setFormName] = useState('');
-    const [formColor, setFormColor] = useState('blue');
+    // Default blue usando il value definito in themeCategoryOptions
+    const [formColor, setFormColor] = useState<string>('blue');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setMode('list');
             setSearchQuery('');
             resetForm();
+            setIsSaving(false);
         }
     }, [isOpen]);
 
@@ -84,13 +92,15 @@ export default function EditCategoryDialog({
         return false;
     }, [mode, formName, formColor, editingId, categories]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!hasChanges) return;
+        if (!hasChanges || isSaving) return;
+
+        setIsSaving(true);
 
         const finalId = (mode === 'edit' && editingId !== null)
             ? editingId
-            : `cat-${Date.now()}`;
+            : `temp-${Date.now()}`;
 
         const newCategory: Category = {
             id: finalId,
@@ -98,7 +108,9 @@ export default function EditCategoryDialog({
             color: formColor
         };
 
-        onSaveCategory(newCategory);
+        await onSaveCategory(newCategory);
+
+        setIsSaving(false);
         setMode('list');
         resetForm();
     };
@@ -111,12 +123,18 @@ export default function EditCategoryDialog({
         }
     };
 
+    // Helper per estrarre classi pulite per l'anteprima (rimuove text-white e hover effects se necessario)
+    // Ma per semplicità usiamo la classe completa fornita, che include il colore di sfondo.
+    const getPreviewClass = (colorValue: string) => {
+        const option = themeCategoryOptions.find(o => o.value === colorValue);
+        return option ? option.class : 'bg-slate-200';
+    };
+
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            {/* Aggiunto 'relative' al container per posizionare il tasto X assoluto.
-            */}
+
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[600px] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-200">
 
                 {/* --- TASTO CHIUSURA FISSO --- */}
@@ -133,13 +151,17 @@ export default function EditCategoryDialog({
                     w-full md:w-1/2 flex flex-col border-r border-slate-100 bg-slate-50/50
                     ${mode !== 'list' ? 'hidden md:flex' : 'flex'}
                 `}>
+                    {/* Header Lista */}
                     <div className="p-4 border-b border-slate-200/60 bg-white flex justify-between items-center sticky top-0 h-[69px]">
                         <div>
                             <h3 className="font-bold text-slate-800">Categorie</h3>
-                            <p className="text-xs text-slate-500 truncate max-w-[150px]">{boardName}</p>
+                            <p className="text-xs text-slate-500 truncate max-w-[200px]" title={boardName}>
+                                {boardName}
+                            </p>
                         </div>
                     </div>
 
+                    {/* Search & Add */}
                     <div className="p-4 space-y-3">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -161,10 +183,11 @@ export default function EditCategoryDialog({
                         </button>
                     </div>
 
+                    {/* Lista Scrollabile */}
                     <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2 custom-scrollbar">
                         {filteredCategories.length === 0 ? (
                             <div className="text-center py-8 text-slate-400 text-sm">
-                                Nessuna categoria trovata.
+                                {searchQuery ? 'Nessuna categoria trovata.' : 'Nessuna categoria presente.'}
                             </div>
                         ) : (
                             filteredCategories.map(cat => (
@@ -180,8 +203,9 @@ export default function EditCategoryDialog({
                                     `}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-3 h-3 rounded-full ${themeCategoryOptions.find(opt => opt.value === cat.color)?.class.split(' ')[0] || 'bg-slate-200'}`}></div>
-                                        <span className="font-medium text-slate-700 text-sm">{cat.name}</span>
+                                        {/* Pallino colore: usiamo la classe definita nell'item Category */}
+                                        <div className={`w-3 h-3 rounded-full ${getPreviewClass(cat.color)}`}></div>
+                                        <span className="font-medium text-slate-700 text-sm truncate max-w-[180px]">{cat.name}</span>
                                     </div>
                                     <ChevronRight className={`w-4 h-4 text-slate-300 ${editingId === cat.id ? 'text-blue-500' : 'group-hover:text-slate-500'}`} />
                                 </div>
@@ -196,6 +220,7 @@ export default function EditCategoryDialog({
                     ${mode === 'list' ? 'hidden md:flex' : 'flex'}
                 `}>
 
+                    {/* Header Form */}
                     <div className="p-4 border-b border-slate-100 flex items-center justify-between h-[69px]">
                         {mode === 'list' ? (
                             <div className="hidden md:flex items-center gap-2 text-slate-400">
@@ -203,7 +228,7 @@ export default function EditCategoryDialog({
                                 <span className="text-sm font-medium">Seleziona o crea una categoria</span>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-3 w-full pr-8"> {/* pr-8 per evitare sovrapposizione con la X fissa */}
+                            <div className="flex items-center gap-3 w-full pr-8">
                                 <button onClick={() => setMode('list')} className="md:hidden p-1 -ml-2 text-slate-400 hover:text-slate-700">
                                     <ArrowLeft className="w-5 h-5" />
                                 </button>
@@ -221,6 +246,7 @@ export default function EditCategoryDialog({
                         )}
                     </div>
 
+                    {/* Contenuto Form */}
                     {mode === 'list' ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 text-center bg-slate-50/30">
                             <Palette className="w-12 h-12 mb-4 opacity-20" />
@@ -238,17 +264,20 @@ export default function EditCategoryDialog({
                                         placeholder="Es. Marketing, Bug..."
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
                                         autoFocus
+                                        disabled={isSaving}
                                     />
                                 </div>
 
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Colore Etichetta</label>
-                                    <div className="grid grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {/* Iteriamo su themeCategoryOptions invece dell'array locale */}
                                         {themeCategoryOptions.map((option) => (
                                             <button
                                                 key={option.value}
                                                 type="button"
                                                 onClick={() => setFormColor(option.value)}
+                                                disabled={isSaving}
                                                 className={`
                                                     relative h-12 rounded-xl border-2 transition-all flex items-center justify-center
                                                     ${formColor === option.value
@@ -257,10 +286,13 @@ export default function EditCategoryDialog({
                                                 }
                                                 `}
                                             >
-                                                <div className={`absolute inset-1 rounded-lg opacity-80 ${option.class.split(' ')[0]}`}></div>
-                                                {formColor === option.value && (
-                                                    <Check className="w-5 h-5 text-slate-800 relative z-10 drop-shadow-sm" />
-                                                )}
+                                                {/* Usiamo option.class per il colore di sfondo */}
+                                                <div className={`absolute inset-1 rounded-lg opacity-90 ${option.class}`}></div>
+
+                                                {/* Mostriamo label o check */}
+                                                <span className="relative z-10 text-xs font-medium text-white/90 drop-shadow-sm">
+                                                    {formColor === option.value ? <Check className="w-5 h-5 text-white" /> : option.label}
+                                                </span>
                                             </button>
                                         ))}
                                     </div>
@@ -269,15 +301,21 @@ export default function EditCategoryDialog({
                         </div>
                     )}
 
+                    {/* Footer Form */}
                     {mode !== 'list' && (
                         <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
-                            <button type="button" onClick={() => setMode('list')} className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors text-sm">
+                            <button
+                                type="button"
+                                onClick={() => setMode('list')}
+                                disabled={isSaving}
+                                className="px-4 py-2 text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors text-sm"
+                            >
                                 Annulla
                             </button>
                             <button
                                 type="submit"
                                 form="category-form"
-                                disabled={!hasChanges}
+                                disabled={!hasChanges || isSaving}
                                 className={`
                                     px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-lg
                                     ${hasChanges
@@ -286,8 +324,12 @@ export default function EditCategoryDialog({
                                 }
                                 `}
                             >
-                                <Save className="w-4 h-4" />
-                                Salva Modifiche
+                                {isSaving ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Save className="w-4 h-4" />
+                                )}
+                                {isSaving ? 'Salvataggio...' : 'Salva Modifiche'}
                             </button>
                         </div>
                     )}

@@ -1,59 +1,125 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase'; // Import necessario per update/delete rapidi
+
+// Componenti UI
 import EditBoardDialog from "@/app/components/Board/EditBoardDialog";
-import CreateBoardDialog, {NewBoardData} from "@/app/components/Board/CreateBoardDialog";
+import CreateBoardDialog, { NewBoardData } from "@/app/components/Board/CreateBoardDialog";
 import BoardCard from "@/app/components/Board/BoardCard";
-import {initialBoards} from "@/items/datas";
-import {Board} from "@/items/Board";
+
+// Logica e Tipi
+import { useAuth } from '@/app/context/AuthContext';
+import { BoardModel } from '@/models/Board';
+import { Board } from '@/items/Board';
 
 export default function WorkspacePage() {
+    // --- HOOKS ---
+    const { user } = useAuth(); // Dati utente reali
+
     // --- STATI ---
-    const [boards, setBoards] = useState<Board[]>(initialBoards);
+    const [boards, setBoards] = useState<Board[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Stati per i Dialog
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [boardToEdit, setBoardToEdit] = useState<Board | null>(null);
 
-    // --- LOGICA FILTRO ---
+    // --- FETCH DATI DAL DB ---
+    const fetchBoards = async () => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            const data = await BoardModel.getAllBoards();
+            setBoards(data);
+        } catch (error) {
+            console.error("Errore caricamento dashboard:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Carica i dati all'avvio o quando cambia l'utente
+    useEffect(() => {
+        fetchBoards();
+    }, [user]);
+
+    // --- LOGICA FILTRO (Client-side) ---
     const filteredBoards = boards.filter(board =>
         board.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // --- HANDLERS (CRUD) ---
+    // --- HANDLERS (CRUD REALE) ---
 
     // 1. CREAZIONE
-    const handleCreateBoard = (data: NewBoardData) => {
-        const newBoard: Board = {
-            id: Date.now().toString(), // ID temporaneo univoco
-            title: data.title,
-            description: data.description,
-            theme: data.theme,
-            icon: 'personal', // Default, potresti aggiungerlo al form di creazione
-            categories: data.categories,
-            stats: { deadlines: 0, inProgress: 0, completed: 0 },
-            guests: data.guests
-        };
+    const handleCreateBoard = async (data: NewBoardData) => {
+        try {
+            // Usa il Model creato prima per salvare su Supabase
+            await BoardModel.createBoard(data.title, data.theme, data.icon);
 
-        setBoards([...boards, newBoard]);
-        setIsCreateDialogOpen(false);
+            // Ricarica i dati per vedere la nuova board
+            await fetchBoards();
+            setIsCreateDialogOpen(false);
+        } catch (error) {
+            console.error("Errore creazione:", error);
+            alert("Impossibile creare la bacheca.");
+        }
     };
 
     // 2. AGGIORNAMENTO
-    const handleUpdateBoard = (updatedData: Board) => {
-        setBoards(prevBoards =>
-            prevBoards.map(board => board.id === updatedData.id ? updatedData : board)
-        );
-        setBoardToEdit(null);
+    const handleUpdateBoard = async (updatedData: Board) => {
+        try {
+            // Aggiornamento diretto su Supabase
+            const { error } = await supabase
+                .from('Boards')
+                .update({
+                    title: updatedData.title,
+                    description: updatedData.description,
+                    theme: updatedData.theme,
+                    icon: updatedData.icon
+                })
+                .eq('id', updatedData.id);
+
+            if (error) throw error;
+
+            // Ricarica UI
+            await fetchBoards();
+            setBoardToEdit(null);
+        } catch (error) {
+            console.error("Errore aggiornamento:", error);
+            alert("Errore durante la modifica.");
+        }
     };
 
     // 3. ELIMINAZIONE
-    const handleDeleteBoard = (id: string | number) => {
-        setBoards(prevBoards => prevBoards.filter(board => board.id !== id));
-        setBoardToEdit(null); // Chiude il dialog se aperto
+    const handleDeleteBoard = async (id: string | number) => {
+        try {
+            const { error } = await supabase
+                .from('Boards')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Ricarica UI (rimuovendo la board eliminata)
+            setBoards(prev => prev.filter(b => b.id !== String(id)));
+            setBoardToEdit(null);
+        } catch (error) {
+            console.error("Errore eliminazione:", error);
+            alert("Errore durante l'eliminazione.");
+        }
     };
+
+    // --- RENDER LOADING ---
+    if (isLoading && boards.length === 0) {
+        return (
+            <div className="flex h-full w-full items-center justify-center min-h-[50vh]">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 lg:p-10 w-full max-w-7xl mx-auto space-y-8">
@@ -62,7 +128,7 @@ export default function WorkspacePage() {
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        Buongiorno, Mario! 👋
+                        Buongiorno, {user?.name || 'Utente'}! 👋
                     </h1>
                     <p className="text-slate-500 mt-2 text-lg">
                         Ecco una panoramica dei tuoi spazi di lavoro attivi.
@@ -94,8 +160,8 @@ export default function WorkspacePage() {
                         <Plus className="w-7 h-7 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                     <span className="font-semibold text-slate-500 group-hover:text-blue-600 transition-colors">
-            Crea Nuova Bacheca
-          </span>
+                        Crea Nuova Bacheca
+                    </span>
                 </button>
 
                 {/* MAPPATURA BACHECHE */}
