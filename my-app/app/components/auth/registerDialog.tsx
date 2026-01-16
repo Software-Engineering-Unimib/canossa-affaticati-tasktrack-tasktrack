@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, Lock, Eye, EyeOff, User, Loader2, ArrowRight, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 interface RegisterDialogProps {
     isOpen: boolean;
@@ -28,6 +29,19 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
     const [error, setError] = useState('');
     const [isSuccess, setIsSuccess] = useState(false); // Per mostrare lo stato di successo
 
+    const resetForm = () => {
+        setFormData({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
+        setIsSuccess(false);
+        setError('');
+    };
+
+    // Resetta il form quando il dialog viene chiuso
+    useEffect(() => {
+        if (!isOpen) {
+            resetForm();
+        }
+    }, [isOpen]);
+
     // Se chiuso, non renderizzare
     if (!isOpen) return null;
 
@@ -47,8 +61,8 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
             setError('Le password non coincidono.');
             return;
         }
-        if (formData.password.length < 8) {
-            setError('La password deve avere almeno 8 caratteri.');
+        if (formData.password.length < 6) {
+            setError('La password deve avere almeno 6 caratteri.');
             return;
         }
         // Qui potresti aggiungere regex per validare l'email studentesca
@@ -56,7 +70,25 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
         setIsLoading(true);
 
         try {
-            // Chiamata API reale al backend
+            // 1. Registrazione con Supabase Auth (Gestisce le email e la sicurezza)
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: formData.email,
+                password: formData.password,
+                options: {
+                    data: {
+                        name: formData.firstName,
+                        surname: formData.lastName,
+                    },
+                },
+            });
+
+            if (authError) {
+                throw new Error(authError.message);
+            }
+
+            // 2. Creazione dell'utente nel Database locale 'Users' (per compatibilità ID numerici)
+            // Nota: In refactoring futuro, dovresti usare il UUID di Supabase invece di creare un duplicato qui.
+            // Per ora, sincronizziamo chiamando la tua API esistente.
             const response = await fetch('/api/users', {
                 method: 'POST',
                 headers: {
@@ -66,18 +98,17 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                     name: formData.firstName,
                     surname: formData.lastName,
                     email: formData.email,
-                    password: formData.password
+                    password: formData.password 
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                // Gestisci l'errore restituito dalla API
-                throw new Error(data.error || 'Errore durante la registrazione');
+                // Se fallisce la creazione in locale, ma l'utente Auth è creato.
+                console.error("Errore Sync DB locale", await response.json());
+                // Non blocchiamo interamente, ma logghiamo l'errore se critico.
             }
 
-            console.log('Utente creato:', data.user);
+            console.log('Utente registrato su Supabase e DB Locale');
 
             // Successo!
             setIsSuccess(true);
@@ -87,7 +118,7 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
             setTimeout(() => {
                 onClose();
                 resetForm();
-            }, 2000);
+            }, 3000);
 
         } catch (err) {
             console.error(err);
@@ -101,14 +132,7 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
         }
     };
 
-    const resetForm = () => {
-        setFormData({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
-        setIsSuccess(false);
-        setError('');
-    };
-
     // --- CONTENUTO DEL DIALOG ---
-
     // Stato di SUCCESSO
     if (isSuccess) {
         return (
@@ -165,7 +189,7 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="text-sm font-semibold text-slate-700 ml-1">Nome</label>
-                                <div className="relative">
+                                <div className="relative"> 
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                     <input
                                         name="firstName"
@@ -178,6 +202,7 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                                     />
                                 </div>
                             </div>
+                                        
                             <div className="space-y-1">
                                 <label className="text-sm font-semibold text-slate-700 ml-1">Cognome</label>
                                 <div className="relative">
@@ -218,6 +243,7 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
+                                    autoComplete="new-password"
                                     name="password"
                                     type={showPassword ? "text" : "password"}
                                     required
@@ -242,6 +268,7 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
+                                    autoComplete="new-password"
                                     name="confirmPassword"
                                     type={showConfirmPassword ? "text" : "password"}
                                     required

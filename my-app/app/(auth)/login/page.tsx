@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import RegisterDialog from "@/app/components/auth/registerDialog";
 import ForgotPasswordDialog from "@/app/components/auth/forgotPasswordDialog";
 
@@ -15,28 +16,54 @@ export default function Login() {
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);
     const [isForgotOpen, setIsForgotOpen] = useState(false);
 
+    // Pulisce i campi al caricamento della pagina per evitare l'autofill del browser
+    useEffect(() => {
+        setEmail('');
+        setPassword('');
+    }, []);
+
     const handleLogin = async (e: { preventDefault: () => void; }) => {
         e.preventDefault();
         setIsLoading(true);
 
-        try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
+        try {// 1. Login con Supabase Auth
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (authError) {
+                throw new Error(authError.message === 'Invalid login credentials' ? 'Credenziali non valide' : authError.message);
+            }
+
+            console.log('Supabase Auth Login successful:', authData.user);
+
+            // 2. Recupero Utente dal Database Locale (per compatibilità ID numerici)
+            // Cerchiamo l'utente locale usando l'email per ottenere il suo ID numerico usato nelle API
+            const response = await fetch(`/api/users?search=${encodeURIComponent(email)}`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
             });
 
             const data = await response.json();
+            
+            // Trova l'utente esatto (la search api fa una ricerca parziale, quindi filtriamo)
+            const localUser = data.users?.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Login fallito');
+            if (!localUser) {
+                // Caso raro: Utente esiste in Auth ma non nel DB locale.
+                // Potresti gestire qui una creazione automatica o lanciare errore.
+                throw new Error("Errore Sincronizzazione Utente: Profilo non trovato.");
             }
 
-            console.log('Login successful:', data.user);
+            console.log('Local User linked:', localUser);
             
-            // Salva l'utente nel localStorage per persistere la sessione (o in un context)
+            // Salva l'utente nel localStorage per persistere la sessione
+            // Combiniamo i dati Auth con i dati Locali se necessario, o usiamo solo quelli locali per ora
+            localStorage.setItem('user', JSON.stringify(localUser));
+            
+            // Opzionale: Salva anche la sessione Supabase se ti serve altrove
+            localStorage.setItem('sb_session', JSON.stringify(authData.session));
             localStorage.setItem('user', JSON.stringify(data.user));
 
             // Reindirizza alla dashboard
@@ -108,7 +135,7 @@ export default function Login() {
                         <p className="mt-2 text-gray-500">Inserisci le tue credenziali per accedere al Workspace.</p>
                     </div>
 
-                    <form onSubmit={handleLogin} className="mt-8 space-y-6">
+                    <form onSubmit={handleLogin} className="mt-8 space-y-6" autoComplete="off">
 
                         {/* Input Email */}
                         <div className="space-y-1">
@@ -123,6 +150,7 @@ export default function Login() {
                                     id="email"
                                     name="email"
                                     type="email"
+                                    autoComplete="off"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -155,6 +183,7 @@ export default function Login() {
                                 <input
                                     id="password"
                                     name="password"
+                                    autoComplete="new-password"
                                     type={showPassword ? "text" : "password"}
                                     required
                                     value={password}
