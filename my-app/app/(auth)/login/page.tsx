@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import RegisterDialog from "@/app/components/auth/registerDialog";
 import ForgotPasswordDialog from "@/app/components/auth/forgotPasswordDialog";
-import {signInWithGitHub, signInWithGoogle} from '@/lib/auth';
+import { signInWithGitHub, signInWithGoogle } from '@/lib/auth';
+// Importa la Server Action per il login
+import { loginAction } from './actions';
 
 export default function Login() {
     const router = useRouter();
@@ -18,32 +20,32 @@ export default function Login() {
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);
     const [isForgotOpen, setIsForgotOpen] = useState(false);
 
-    const handleLogin = async (e: { preventDefault: () => void; }) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
+            // Chiama la Server Action invece della fetch client-side
+            const result = await loginAction(email, password);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Login fallito');
+            if (!result.success) {
+                throw new Error(result.error || 'Login fallito');
             }
 
-            console.log('Login successful:', data.user);
+            console.log('Login successful via Server Action');
 
-            // Salva l'utente nel localStorage per persistere la sessione
-            localStorage.setItem('user', JSON.stringify(data.user));
+            // Salva l'utente nel localStorage se ti serve ancora per la UI client-side,
+            // ma l'autenticazione vera e propria ora è gestita dai cookie httpOnly.
+            // Se "result.user" non è restituito dall'action, puoi rimuovere questa riga
+            // o aggiornare l'action per restituire i dati utente non sensibili.
+            // localStorage.setItem('user', JSON.stringify(result.user));
 
             // Reindirizza alla dashboard
             router.push('/dashboard');
+
+            // Forza un refresh per assicurarsi che i Server Components riconoscano il nuovo cookie
+            router.refresh();
+
         } catch (error) {
             console.error('Login error:', error);
             alert(error instanceof Error ? error.message : "Errore durante il login");
