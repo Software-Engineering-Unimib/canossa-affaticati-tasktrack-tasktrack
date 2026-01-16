@@ -23,8 +23,8 @@ import LogoDesktop from "@/app/components/logo/logoDesktop";
 import SidebarBoardItem from "@/app/components/sidebar/SidebarBoardItem";
 import CreateBoardDialog, { NewBoardData } from "@/app/components/Board/CreateBoardDialog";
 import LogoutDialog from '@/app/components/auth/LogoutDialog'; // <--- IMPORT DIALOG LOGOUT
-import { initialBoards } from "@/public/datas";
-import { getClassByTheme } from "@/public/Board";
+import { initialBoards } from "@/items/datas";
+import { getClassByTheme } from "@/items/Board";
 import { useFocus } from "@/app/context/FocusContext";
 
 interface NavItemProps {

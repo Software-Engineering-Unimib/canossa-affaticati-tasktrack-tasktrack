@@ -8,9 +8,9 @@ import {
 } from 'lucide-react';
 
 // Import Dati e Tipi
-import { initialBoards } from '@/public/datas';
-import { Board } from '@/public/Board';
-import { Category } from '@/public/Category';
+import { initialBoards } from '@/items/datas';
+import { Board } from '@/items/Board';
+import { Category } from '@/items/Category';
 
 // Import Componenti
 import CategoryCard from '@/app/components/categories/CategoryCard';

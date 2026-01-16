@@ -13,7 +13,7 @@ import {
     ArrowLeft,
     ChevronRight
 } from 'lucide-react';
-import { Category, themeCategoryOptions } from '@/public/Category';
+import { Category, themeCategoryOptions } from '@/items/Category';
 
 interface EditCategoryDialogProps {
     isOpen: boolean;

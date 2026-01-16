@@ -5,8 +5,8 @@ import { Plus, Search } from 'lucide-react';
 import EditBoardDialog from "@/app/components/Board/EditBoardDialog";
 import CreateBoardDialog, {NewBoardData} from "@/app/components/Board/CreateBoardDialog";
 import BoardCard from "@/app/components/Board/BoardCard";
-import {initialBoards} from "@/public/datas";
-import {Board} from "@/public/Board";
+import {initialBoards} from "@/items/datas";
+import {Board} from "@/items/Board";
 
 export default function WorkspacePage() {
     // --- STATI ---

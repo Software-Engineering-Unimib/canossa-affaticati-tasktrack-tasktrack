@@ -17,9 +17,9 @@ import {
     Send,
     Columns
 } from 'lucide-react';
-import { Task, ColumnId } from '@/public/Task';
-import { PriorityLevel, getPriorityStyles } from '@/public/Priority';
-import { Category, themeCategoryOptions } from '@/public/Category';
+import { Task, ColumnId } from '@/items/Task';
+import { PriorityLevel, getPriorityStyles } from '@/items/Priority';
+import { Category, themeCategoryOptions } from '@/items/Category';
 
 // Tipi locali
 interface Attachment {

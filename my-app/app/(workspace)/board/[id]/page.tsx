@@ -9,10 +9,10 @@ import {
 } from 'lucide-react';
 
 // Importazione Tipi e Dati
-import { Task, ColumnId, ColumnData } from '@/public/Task';
-import { PriorityLevel } from '@/public/Priority';
-import { initialTasks, initialBoards } from '@/public/datas';
-import { getBoardFromId } from '@/public/Board';
+import { Task, ColumnId, ColumnData } from '@/items/Task';
+import { PriorityLevel } from '@/items/Priority';
+import { initialTasks, initialBoards } from '@/items/datas';
+import { getBoardFromId } from '@/items/Board';
 
 // Importazione Componenti Custom
 import TaskCard from '@/app/components/KanbanBoard/TaskCard';

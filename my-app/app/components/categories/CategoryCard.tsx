@@ -5,9 +5,9 @@ import {
     MoreVertical,
     BookOpen,
 } from 'lucide-react';
-import { BoardIcons, Icon } from "@/public/BoardIcon";
-import { themeCardStyles, BoardTheme } from "@/public/Board";
-import { Category, getCategoryColorClass } from '@/public/Category'; // Importa l'interfaccia Category e le opzioni di tema
+import { BoardIcons, Icon } from "@/items/BoardIcon";
+import { themeCardStyles, BoardTheme } from "@/items/Board";
+import { Category, getCategoryColorClass } from '@/items/Category'; // Importa l'interfaccia Category e le opzioni di tema
 
 export interface CategoryCardProps {
     id: string | number;

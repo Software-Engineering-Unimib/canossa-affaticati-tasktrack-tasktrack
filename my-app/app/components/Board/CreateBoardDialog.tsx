@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Trash2, Check, Loader2, LayoutGrid, ChevronDown } from 'lucide-react';
 // Assicurati che il percorso di importazione sia corretto per il tuo progetto
-import { themeBoardOptions, BoardTheme } from "@/public/Board";
-import { Icon, iconBoardOptions } from '@/public/BoardIcon';
-import { Category } from '@/public/Category';
+import { themeBoardOptions, BoardTheme } from "@/items/Board";
+import { Icon, iconBoardOptions } from '@/items/BoardIcon';
+import { Category } from '@/items/Category';
 
 interface CreateBoardDialogProps {
     isOpen: boolean;

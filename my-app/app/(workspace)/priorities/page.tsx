@@ -12,8 +12,8 @@ import {
     Loader2
 } from 'lucide-react';
 
-import { PriorityConfig, PriorityLevel, unitOptions } from '@/public/Priority';
-import { initialPriorities } from '@/public/datas';
+import { PriorityConfig, PriorityLevel, unitOptions } from '@/items/Priority';
+import { initialPriorities } from '@/items/datas';
 
 export default function PrioritiesPage() {
     // Stato corrente modificabile dall'utente

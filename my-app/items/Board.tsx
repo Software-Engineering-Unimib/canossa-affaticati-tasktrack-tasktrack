@@ -1,5 +1,5 @@
 // Interfaccia per i dati della bacheca esistente
-import { Icon } from "@/public/BoardIcon";
+import { Icon } from "@/items/BoardIcon";
 import { Category } from "./Category";
 
 export interface Board {

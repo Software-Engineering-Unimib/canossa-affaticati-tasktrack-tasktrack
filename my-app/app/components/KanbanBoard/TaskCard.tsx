@@ -9,9 +9,9 @@ import {
     AlertCircle,
     CalendarDays
 } from 'lucide-react';
-import { Task } from '@/public/Task';
-import { getPriorityStyles } from '@/public/Priority';
-import { themeCategoryOptions } from '@/public/Category';
+import { Task } from '@/items/Task';
+import { getPriorityStyles } from '@/items/Priority';
+import { themeCategoryOptions } from '@/items/Category';
 
 interface TaskCardProps {
     task: Task;

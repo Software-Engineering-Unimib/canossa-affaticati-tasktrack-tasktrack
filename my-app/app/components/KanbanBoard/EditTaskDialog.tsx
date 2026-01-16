@@ -17,9 +17,9 @@ import {
     FileText,
     UploadCloud
 } from 'lucide-react';
-import { Task } from '@/public/Task';
-import { PriorityLevel, getPriorityStyles } from '@/public/Priority';
-import { Category, themeCategoryOptions } from '@/public/Category';
+import { Task } from '@/items/Task';
+import { PriorityLevel, getPriorityStyles } from '@/items/Priority';
+import { Category, themeCategoryOptions } from '@/items/Category';
 
 // --- TIPI LOCALI PER COMMENTI E FILE ---
 // (In un'app reale questi starebbero nel file di definizione Task)
