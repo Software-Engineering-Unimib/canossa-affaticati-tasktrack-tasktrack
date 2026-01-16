@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard,
     Tags,
@@ -25,11 +25,11 @@ import SidebarBoardItem from "@/app/components/sidebar/SidebarBoardItem";
 import CreateBoardDialog, { NewBoardData } from "@/app/components/Board/CreateBoardDialog";
 import LogoutDialog from '@/app/components/auth/LogoutDialog';
 
-// Import Logica e Dati Reali
+// Import Logica e Context
 import { useAuth } from '@/app/context/AuthContext';
+import { useBoards } from '@/app/context/BoardsContext'; // <--- USA IL NUOVO CONTEXT CONDIVISO
 import { useFocus } from "@/app/context/FocusContext";
-import { BoardModel } from '@/models/Board';
-import { Board } from '@/items/Board';
+import { BoardModel } from '@/models';
 import { getClassByTheme } from "@/items/Board";
 
 interface NavItemProps {
@@ -39,7 +39,7 @@ interface NavItemProps {
     active?: boolean;
 }
 
-// Componente Helper Navigazione (estratto per pulizia)
+// Helper per i link di navigazione
 const NavItem: React.FC<NavItemProps> = ({ href, icon: Icon, label, active = false }) => (
     <Link
         href={href}
@@ -57,51 +57,28 @@ const NavItem: React.FC<NavItemProps> = ({ href, icon: Icon, label, active = fal
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const router = useRouter();
 
-    // --- HOOKS REALI ---
+    // --- HOOKS ---
     const { user, signOut } = useAuth();
     const { isFocusMode, toggleFocusMode } = useFocus();
 
-    // --- STATI MENU & INTERAZIONE ---
+    // USIAMO IL CONTEXT PER LE BACHECHE (Dati condivisi con Dashboard)
+    const { boards, isLoading: isLoadingBoards, refreshBoards } = useBoards();
+
+    // --- STATI UI ---
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
     const [isBoardsOpen, setIsBoardsOpen] = useState<boolean>(true);
-
-    // --- STATI DATI ---
-    const [boards, setBoards] = useState<Board[]>([]);
-    const [isLoadingBoards, setIsLoadingBoards] = useState(true);
-
-    // --- STATI DIALOGS ---
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-
-    // --- LOGICA FETCH DATI ---
-    const fetchBoards = async () => {
-        if (!user) return;
-        try {
-            const data = await BoardModel.getAllBoards();
-            setBoards(data);
-        } catch (err) {
-            console.error("Errore caricamento bacheche:", err);
-        } finally {
-            setIsLoadingBoards(false);
-        }
-    };
-
-    // Carica le bacheche quando l'utente è pronto
-    useEffect(() => {
-        fetchBoards();
-    }, [user]);
 
     // Gestione Creazione Bacheca
     const handleCreateBoard = async (data: NewBoardData) => {
         try {
-            await BoardModel.createBoard(data.title, data.theme, data.icon);
-            await fetchBoards(); // Ricarica la lista per mostrare la nuova bacheca
+            await BoardModel.createBoard(data.title,data.description, data.theme, data.icon);
+            await refreshBoards(); // Aggiorna sia Sidebar che Dashboard
             setIsCreateDialogOpen(false);
         } catch (error) {
             console.error("Errore creazione:", error);
-            // Qui potresti mostrare un toast di errore
         }
     };
 
@@ -180,7 +157,7 @@ export default function Sidebar() {
 
                         {isBoardsOpen && (
                             <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
-                                {/* Loading State Opzionale */}
+                                {/* Loading State */}
                                 {isLoadingBoards && (
                                     <div className="px-3 py-2 text-xs text-gray-400 italic">
                                         Caricamento...

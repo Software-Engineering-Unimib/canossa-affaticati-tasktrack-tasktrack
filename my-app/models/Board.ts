@@ -73,24 +73,26 @@ export class BoardModel {
     // SEZIONE 2: SCRITTURA (CREATE)
     // ==========================================
 
-    static async createBoard(title: string, theme: BoardTheme, icon: BoardIcon) {
+    static async createBoard(title: string, description: string, theme: BoardTheme, icon: BoardIcon) {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
 
+        // 1. Crea la Board passando la descrizione corretta
         const { data: board, error } = await supabase
             .from('Boards')
             .insert({
                 title,
+                description: description || '', // Usa il parametro passato (o stringa vuota se null)
                 theme,
                 icon,
-                owner_id: user.id,
-                description: ''
+                owner_id: user.id
             })
             .select()
             .single();
 
         if (error) throw error;
 
+        // 2. Crea Categorie Default
         const defaultCategories = [
             { name: 'Da fare', color: 'blue', board_id: board.id },
             { name: 'In corso', color: 'orange', board_id: board.id },
@@ -143,5 +145,28 @@ export class BoardModel {
             stats: stats,
             guests: []
         };
+    }
+    /**
+     * Aggiorna una bacheca esistente
+     */
+    static async updateBoard(id: string | number, title: string, description: string, theme: string, icon: string) {
+        const { error } = await supabase
+            .from('Boards')
+            .update({ title, description, theme, icon })
+            .eq('id', id);
+
+        if (error) throw error;
+    }
+
+    /**
+     * Elimina una bacheca
+     */
+    static async deleteBoard(id: string | number) {
+        const { error } = await supabase
+            .from('Boards')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
     }
 }
