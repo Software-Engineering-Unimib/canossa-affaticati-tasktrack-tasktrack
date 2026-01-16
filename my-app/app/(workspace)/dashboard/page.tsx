@@ -27,7 +27,7 @@ export default function WorkspacePage() {
     // 1. CREAZIONE
     const handleCreateBoard = (data: NewBoardData) => {
         const newBoard: Board = {
-            id: Date.now(), // ID temporaneo univoco
+            id: Date.now().toString(), // ID temporaneo univoco
             title: data.title,
             description: data.description,
             theme: data.theme,
