@@ -27,7 +27,7 @@ export default function WorkspacePage() {
     // 1. CREAZIONE
     const handleCreateBoard = (data: NewBoardData) => {
         const newBoard: Board = {
-            id: Date.now(), // ID temporaneo univoco
+            id: Date.now().toString(), // ID temporaneo univoco
             title: data.title,
             description: data.description,
             theme: data.theme,
@@ -112,7 +112,7 @@ export default function WorkspacePage() {
                 {/* FEEDBACK NESSUN RISULTATO */}
                 {filteredBoards.length === 0 && searchQuery && (
                     <div className="col-span-full text-center py-12 text-slate-400 italic">
-                        Nessuna bacheca trovata per "{searchQuery}"
+                        Nessuna bacheca trovata per {searchQuery}
                     </div>
                 )}
 

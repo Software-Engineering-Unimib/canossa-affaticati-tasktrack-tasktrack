@@ -1,96 +1,73 @@
 import { supabase } from '@/lib/supabase'
 
-export interface User {
-    id?: number
-    created_at?: string
+export interface UserProfile {
+    id: string       // UUID (lo stesso di auth.users)
     name: string
     surname: string
-    email: string
-    password: string
+    email?: string   // Opzionale: spesso l'email sta solo in auth, ma puoi copiarla qui
+    created_at?: string
 }
 
 export class UserModel {
-    // Ottieni tutti gli utenti
-    static async findAll(): Promise<{ data: User[] | null; error: any }> {
-        const { data, error } = await supabase
-            .from('Users')
+    // ==========================================
+    // SEZIONE 1: AUTENTICAZIONE (Auth)
+    // ==========================================
+
+    // Login (uguale a prima)
+    static async signIn(email: string, password: string) {
+        return await supabase.auth.signInWithPassword({ email, password })
+    }
+
+    // Logout
+    static async signOut() {
+        return await supabase.auth.signOut()
+    }
+
+    // ==========================================
+    // SEZIONE 2: GESTIONE DATI (Tabella Profiles)
+    // ==========================================
+
+    // Ottieni il profilo dell'utente loggato
+    static async getCurrentProfile() {
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) return { data: null, error: 'No user logged in' }
+
+        return supabase
+            .from('Profiles')
             .select('*')
-            .order('created_at', { ascending: false })
-
-        return { data, error }
+            .eq('id', user.id)
+            .single();
     }
 
-    // Ottieni un utente per ID
-    static async findById(id: number): Promise<{ data: User | null; error: any }> {
-        const { data, error } = await supabase
-            .from('Users')
-            .select('*')
-            .eq('id', id)
-            .single()
-
-        return { data, error }
-    }
-
-    // Ottieni un utente per email
-    static async findByEmail(email: string): Promise<{ data: User | null; error: any }> {
-        const { data, error } = await supabase
-            .from('Users')
-            .select('*')
-            .eq('email', email)
-            .single()
-
-        return { data, error }
-    }
-
-    // Crea un nuovo utente
-    static async create(userData: Omit<User, 'id' | 'created_at'>): Promise<{ data: User | null; error: any }> {
-        const { data, error } = await supabase
-            .from('Users')
-            .insert(userData)
-            .select()
-            .single()
-
-        return { data, error }
-    }
-
-    // Aggiorna un utente
-    static async update(id: number, userData: Partial<Omit<User, 'id' | 'created_at'>>): Promise<{ data: User | null; error: any }> {
-        const { data, error } = await supabase
-            .from('Users')
-            .update(userData)
+    // Aggiorna il profilo (Nome, Cognome)
+    static async updateProfile(id: string, updates: Partial<UserProfile>) {
+        return supabase
+            .from('Profiles')
+            .update(updates)
             .eq('id', id)
             .select()
-            .single()
-
-        return { data, error }
+            .single();
     }
 
-    // Elimina un utente
-    static async delete(id: number): Promise<{ data: any; error: any }> {
-        const { data, error } = await supabase
-            .from('Users')
-            .delete()
-            .eq('id', id)
+    // ==========================================
+    // SEZIONE 3: FUNZIONI "SOCIAL" (Ora possibili)
+    // ==========================================
 
-        return { data, error }
+    // Cerca utenti per assegnare task (es. scrivi "Lor" e trovi "Loris")
+    static async searchUsers(query: string) {
+        return supabase
+            .from('Profiles')
+            .select('id, name, surname') // Seleziona solo dati pubblici
+            .or(`name.ilike.%${query}%,surname.ilike.%${query}%`)
+            .limit(10);
     }
 
-    // Conta tutti gli utenti
-    static async count(): Promise<{ count: number | null; error: any }> {
-        const { count, error } = await supabase
-            .from('Users')
-            .select('*', { count: 'exact', head: true })
-
-        return { count, error }
-    }
-
-    // Cerca utenti per nome o cognome
-    static async search(query: string): Promise<{ data: User[] | null; error: any }> {
-        const { data, error } = await supabase
-            .from('Users')
+    // Ottieni tutti gli utenti (es. per un dropdown)
+    static async findAll() {
+        return supabase
+            .from('Profiles')
             .select('*')
-            .or(`name.ilike.%${query}%,surname.ilike.%${query}%,email.ilike.%${query}%`)
-
-        return { data, error }
+            .order('name', {ascending: true});
     }
 }
