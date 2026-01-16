@@ -41,34 +41,6 @@ export default function Login() {
 
             console.log('Supabase Auth Login successful:', authData.user);
 
-            // 2. Recupero Utente dal Database Locale (per compatibilità ID numerici)
-            // Cerchiamo l'utente locale usando l'email per ottenere il suo ID numerico usato nelle API
-            const response = await fetch(`/api/users?search=${encodeURIComponent(email)}`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            const data = await response.json();
-            
-            // Trova l'utente esatto (la search api fa una ricerca parziale, quindi filtriamo)
-            const localUser = data.users?.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
-
-            if (!localUser) {
-                // Caso raro: Utente esiste in Auth ma non nel DB locale.
-                // Potresti gestire qui una creazione automatica o lanciare errore.
-                throw new Error("Errore Sincronizzazione Utente: Profilo non trovato.");
-            }
-
-            console.log('Local User linked:', localUser);
-            
-            // Salva l'utente nel localStorage per persistere la sessione
-            // Combiniamo i dati Auth con i dati Locali se necessario, o usiamo solo quelli locali per ora
-            localStorage.setItem('user', JSON.stringify(localUser));
-            
-            // Opzionale: Salva anche la sessione Supabase se ti serve altrove
-            localStorage.setItem('sb_session', JSON.stringify(authData.session));
-            localStorage.setItem('user', JSON.stringify(data.user));
-
             // Reindirizza alla dashboard
             router.push('/dashboard');
         } catch (error) {

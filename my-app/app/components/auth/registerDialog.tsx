@@ -86,30 +86,6 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                 throw new Error(authError.message);
             }
 
-            // 2. Creazione dell'utente nel Database locale 'Users' (per compatibilità ID numerici)
-            // Nota: In refactoring futuro, dovresti usare il UUID di Supabase invece di creare un duplicato qui.
-            // Per ora, sincronizziamo chiamando la tua API esistente.
-            const response = await fetch('/api/users', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.firstName,
-                    surname: formData.lastName,
-                    email: formData.email,
-                    password: formData.password 
-                }),
-            });
-
-            if (!response.ok) {
-                // Se fallisce la creazione in locale, ma l'utente Auth è creato.
-                console.error("Errore Sync DB locale", await response.json());
-                // Non blocchiamo interamente, ma logghiamo l'errore se critico.
-            }
-
-            console.log('Utente registrato su Supabase e DB Locale');
-
             // Successo!
             setIsSuccess(true);
             if (onRegisterSuccess) onRegisterSuccess();
