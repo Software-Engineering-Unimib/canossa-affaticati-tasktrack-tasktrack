@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { UserModel } from '@/models/User'
+import bcrypt from 'bcryptjs'
 
 export async function GET(request: Request) {
     try {
@@ -73,14 +74,14 @@ export async function POST(request: Request) {
             }, { status: 409 })
         }
 
-        // NOTA: In produzione, dovresti hashare la password prima di salvarla!
-        // Esempio: const hashedPassword = await bcrypt.hash(body.password, 10)
+        // Hash della password
+        const hashedPassword = await bcrypt.hash(body.password, 10);
 
         const { data, error } = await UserModel.create({
             name: body.name,
             surname: body.surname,
             email: body.email,
-            password: body.password // In produzione usa hashedPassword
+            password: hashedPassword
         })
 
         if (error) {

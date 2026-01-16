@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import RegisterDialog from "@/app/components/auth/registerDialog";
 import ForgotPasswordDialog from "@/app/components/auth/forgotPasswordDialog";
 
 export default function Login() {
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -17,12 +19,34 @@ export default function Login() {
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulazione chiamata API
-        setTimeout(() => {
-            console.log('Login attempt:', { email, password });
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login fallito');
+            }
+
+            console.log('Login successful:', data.user);
+            
+            // Salva l'utente nel localStorage per persistere la sessione (o in un context)
+            localStorage.setItem('user', JSON.stringify(data.user));
+
+            // Reindirizza alla dashboard
+            router.push('/dashboard');
+        } catch (error) {
+            console.error('Login error:', error);
+            alert(error instanceof Error ? error.message : "Errore durante il login");
+        } finally {
             setIsLoading(false);
-            // Qui reindirizzeresti alla dashboard
-        }, 1500);
+        }
     };
 
     return (

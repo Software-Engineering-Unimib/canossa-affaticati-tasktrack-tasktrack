@@ -34,7 +34,6 @@ export class BoardModel {
             .from('Boards')
             .select('*')
             .order('created_at', { ascending: false })
-
         return { data, error }
     }
 

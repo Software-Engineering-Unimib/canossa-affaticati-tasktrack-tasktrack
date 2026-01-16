@@ -56,10 +56,28 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
         setIsLoading(true);
 
         try {
-            // SIMULAZIONE CHIAMATA API
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Chiamata API reale al backend
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: formData.firstName,
+                    surname: formData.lastName,
+                    email: formData.email,
+                    password: formData.password
+                }),
+            });
 
-            console.log('Dati registrazione:', formData);
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Gestisci l'errore restituito dalla API
+                throw new Error(data.error || 'Errore durante la registrazione');
+            }
+
+            console.log('Utente creato:', data.user);
 
             // Successo!
             setIsSuccess(true);
@@ -72,7 +90,12 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
             }, 2000);
 
         } catch (err) {
-            setError('Si è verificato un errore. Riprova più tardi.');
+            console.error(err);
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Si è verificato un errore. Riprova più tardi.');
+            }
         } finally {
             setIsLoading(false);
         }
