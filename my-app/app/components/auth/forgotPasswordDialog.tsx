@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Mail, ArrowLeft, KeyRound, Loader2, CheckCircle } from 'lucide-react';
+import { X, Mail, ArrowLeft, KeyRound, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabase'; 
 
 interface ForgotPasswordDialogProps {
     isOpen: boolean;
@@ -11,35 +12,44 @@ interface ForgotPasswordDialogProps {
 export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPasswordDialogProps) {
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isSent, setIsSent] = useState(false); // Stato per mostrare la conferma
+    const [isSent, setIsSent] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setErrorMessage(null);
 
-        // Simulazione chiamata API
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/resetPassword`,
+            });
 
-        // Passiamo allo stato di successo
-        setIsSent(true);
-        setIsLoading(false);
+            if (error) {
+                setErrorMessage(error.message);
+            } else {
+                setIsSent(true);
+            }
+        } catch (err) {
+            setErrorMessage("Si è verificato un errore imprevisto.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleReset = () => {
-        // Resetta lo stato se l'utente chiude e riapre o vuole riprovare
         setEmail('');
         setIsSent(false);
+        setErrorMessage(null);
         onClose();
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto animate-in zoom-in-95 duration-200 overflow-hidden">
 
-                {/* Tasto Chiudi (in alto a destra) */}
                 <button
                     onClick={handleReset}
                     className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10"
@@ -47,10 +57,7 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
                     <X className="w-5 h-5" />
                 </button>
 
-                {/* --- CONTENUTO: DUE STATI (FORM o SUCCESSO) --- */}
-
                 {!isSent ? (
-                    /* STATO 1: FORM DI INSERIMENTO */
                     <div className="p-8">
                         <div className="flex justify-center mb-6">
                             <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center">
@@ -61,9 +68,17 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
                         <div className="text-center mb-8">
                             <h2 className="text-2xl font-bold text-slate-900">Password dimenticata?</h2>
                             <p className="text-slate-500 mt-2 text-sm">
-                                Nessun problema. Inserisci la tua email e ti invieremo le istruzioni per reimpostarla.
+                                Inserisci la tua email e ti invieremo le istruzioni per reimpostarla.
                             </p>
                         </div>
+
+                        {/* --- MOSTRA ERRORI SE PRESENTI --- */}
+                        {errorMessage && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2 text-sm text-red-600">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                <span>{errorMessage}</span>
+                            </div>
+                        )}
 
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-1.5">
@@ -108,7 +123,6 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
                         </div>
                     </div>
                 ) : (
-                    /* STATO 2: SUCCESSO (EMAIL INVIATA) */
                     <div className="p-8 text-center animate-in slide-in-from-right-4 duration-300">
                         <div className="flex justify-center mb-6">
                             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
@@ -124,14 +138,14 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
 
                         <div className="space-y-3">
                             <button
-                                onClick={onClose} // Chiude il dialog e torna al login
+                                onClick={onClose}
                                 className="w-full py-3 px-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all"
                             >
                                 Torna al Login
                             </button>
 
                             <button
-                                onClick={() => setIsSent(false)} // Torna indietro per correggere l'email
+                                onClick={() => setIsSent(false)}
                                 className="text-sm text-slate-500 hover:text-blue-600 font-medium transition-colors"
                             >
                                 Non hai ricevuto l'email? Riprova
@@ -139,7 +153,6 @@ export default function ForgotPasswordDialog({ isOpen, onClose }: ForgotPassword
                         </div>
                     </div>
                 )}
-
             </div>
         </div>
     );

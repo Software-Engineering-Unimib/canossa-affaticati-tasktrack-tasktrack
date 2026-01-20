@@ -11,7 +11,6 @@ export default function AuthCallbackPage() {
     useEffect(() => {
         const handleAuthCallback = async () => {
             try {
-                // Supabase gestisce automaticamente il code exchange dall'URL
                 const { data: { session }, error } = await supabase.auth.getSession();
 
                 if (error) {
@@ -21,8 +20,6 @@ export default function AuthCallbackPage() {
                 }
 
                 if (session) {
-                    // Utente autenticato con successo
-                    // Opzionale: sincronizza i dati utente con la tua tabella Users
                     await syncUserData(session.user);
 
                     router.push('/dashboard');
