@@ -1,23 +1,18 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, use } from 'react';
-import {
-    Plus,
-    Search,
-    Filter,
-    Check
-} from 'lucide-react';
+import { Plus, Search, Filter, Check, Loader2 } from 'lucide-react';
 
 // Importazione Tipi e Dati
 import { Task, ColumnId, ColumnData } from '@/items/Task';
 import { PriorityLevel } from '@/items/Priority';
-import { initialTasks, initialBoards } from '@/items/datas';
-import { getBoardFromId } from '@/items/Board';
+import { BoardModel, TaskModel } from '@/models'; // Importa modelli reali
+import { Board } from '@/items/Board'; // Importa tipo Board
 
 // Importazione Componenti Custom
 import TaskCard from '@/app/components/KanbanBoard/TaskCard';
-// NOTA: Sostituiti CreateTaskDialog e EditTaskDialog con il nuovo componente unificato
 import TaskDialog from '@/app/components/KanbanBoard/TaskDialog';
+import { useAuth } from '@/app/context/AuthContext'; // Auth hook
 
 // Configurazione Colonne Kanban
 const columnsConfig: ColumnData[] = [
@@ -39,11 +34,13 @@ const priorityOrder: Record<string, number> = {
 export default function BoardPage({ params }: { params: Promise<{ id: string }> }) {
 
     // 1. Spacchettamento ID (Next.js 15)
-    const { id } = use(params);
+    const { id: boardId } = use(params);
+    const { user } = useAuth();
 
     // --- STATI DATI ---
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [boardTitle, setBoardTitle] = useState('');
+    const [board, setBoard] = useState<Board | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // --- STATI UI & INTERAZIONE ---
     const [searchQuery, setSearchQuery] = useState('');
@@ -58,16 +55,31 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [createColumnId, setCreateColumnId] = useState<ColumnId>('todo');
 
-    // Recupero info board corrente
-    const board = getBoardFromId(initialBoards, id);
+    // --- CARICAMENTO DATI REALI ---
+    const loadData = async () => {
+        if (!user || !boardId) return;
+        // Se stiamo aggiornando dopo un'azione (es. save), non mostrare full loader se abbiamo già dati
+        // ma qui per semplicità usiamo isLoading solo al primo mount
+        try {
+            const boardData = await BoardModel.getBoardById(boardId);
+            setBoard(boardData);
+            if (boardData) {
+                const tasksData = await TaskModel.getTasksByBoardId(boardId);
+                setTasks(tasksData);
+                console.log("Tasks caricati:", tasksData);
+            }
+        } catch (error) {
+            console.error("Errore caricamento board:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    // Caricamento Dati Iniziali
     useEffect(() => {
-        const initialData = initialTasks[id] || [];
-        setTasks(initialData);
-        setBoardTitle(board ? board.title : 'Board Non Trovata');
-    }, [id, board]);
+        loadData();
+    }, [boardId, user]);
 
     // --- LOGICA FILTRAGGIO ---
     const filteredTasks = useMemo(() => {
@@ -117,16 +129,27 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
         e.preventDefault();
     };
 
-    const handleDrop = (e: React.DragEvent, targetColumn: ColumnId) => {
+    const handleDrop = async (e: React.DragEvent, targetColumn: ColumnId) => {
         e.preventDefault();
         if (!draggedTaskId) return;
 
+        // Aggiornamento ottimistico
         setTasks(prev => prev.map(task => {
             if (task.id === draggedTaskId) {
                 return { ...task, columnId: targetColumn };
             }
             return task;
         }));
+
+        // Aggiornamento Backend
+        try {
+            await TaskModel.updateTaskColumn(draggedTaskId, targetColumn);
+        } catch (error) {
+            console.error("Errore spostamento task:", error);
+            // Revert ottimistico (opzionale, richiederebbe ricaricamento dati)
+            loadData();
+        }
+
         setDraggedTaskId(null);
     };
 
@@ -140,32 +163,40 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
     };
 
     // Apertura Creazione
-    const openCreateDialog = () => {
+    const openCreateDialog = (columnId: ColumnId = 'todo') => {
         setDialogMode('create');
         setSelectedTask(null);
+        setCreateColumnId(columnId); // Impostiamo la colonna di default per il nuovo task
         setIsDialogOpen(true);
     };
 
-    // Gestione unificata Salvataggio (Create & Update)
+    // Callback salvataggio
     const handleSaveUnified = (taskToSave: Task) => {
-        if (dialogMode === 'create') {
-            // Creazione: aggiungi in testa
-            setTasks(prev => [taskToSave, ...prev]);
-        } else {
-            // Modifica: sostituisci l'esistente
-            setTasks(prev => prev.map(t => t.id === taskToSave.id ? taskToSave : t));
-        }
-        // Il dialog viene chiuso internamente dal componente o possiamo forzarlo qui se necessario,
-        // ma TaskDialog chiama onClose dopo onSave, quindi qui aggiorniamo solo i dati.
+        // Aggiorniamo la UI locale immediatamente o ricarichiamo dal server
+        // Per consistenza con ID generati dal DB, è meglio ricaricare
+        loadData();
     };
 
     // Eliminazione
-    const handleDeleteTask = (taskId: string) => {
-        setTasks(prev => prev.filter(t => t.id !== taskId));
+    const handleDeleteTask = async (taskId: string) => {
+        try {
+            await TaskModel.deleteTask(taskId);
+            setTasks(prev => prev.filter(t => t.id !== taskId));
+        } catch (e) { console.error(e); }
     };
 
     // Conta filtri attivi per badge UI
     const activeFiltersCount = selectedPriorities.length + selectedCategories.length;
+
+    if (isLoading) {
+        return (
+            <div className="flex h-full items-center justify-center">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+            </div>
+        );
+    }
+
+    if (!board) return <div className="p-10 text-center">Bacheca non trovata.</div>;
 
     return (
         <div
@@ -177,7 +208,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 flex-none relative z-20">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{boardTitle}</h1>
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{board.title}</h1>
                         <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs font-semibold">
                             Privata
                         </span>
@@ -289,7 +320,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 
                     {/* Bottone Nuovo Task */}
                     <button
-                        onClick={openCreateDialog}
+                        onClick={() => openCreateDialog('todo')}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20"
                     >
                         <Plus className="w-4 h-4" />
@@ -314,7 +345,6 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
                                 return valA - valB;
                             }
 
-                            // Gestisce date sia come oggetti Date che come stringhe
                             const dateA = a.dueDate instanceof Date ? a.dueDate.getTime() : new Date(a.dueDate).getTime();
                             const dateB = b.dueDate instanceof Date ? b.dueDate.getTime() : new Date(b.dueDate).getTime();
 
@@ -356,6 +386,14 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
                                             />
                                         ))
                                     )}
+
+                                    {/* Tasto rapido aggiungi in colonna */}
+                                    <button
+                                        onClick={() => openCreateDialog(col.id)}
+                                        className="w-full py-2 mt-2 border border-dashed border-slate-300 text-slate-400 rounded-xl hover:bg-white hover:text-blue-600 hover:border-blue-300 transition-all text-xs font-medium flex items-center justify-center gap-1"
+                                    >
+                                        <Plus className="w-3 h-3" /> Aggiungi
+                                    </button>
                                 </div>
                             </div>
                         );
@@ -369,6 +407,8 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
                 mode={dialogMode}
                 task={selectedTask}
                 boardCategories={board ? board.categories : []}
+                boardId={boardId} // Passiamo l'ID della board
+                columnId={createColumnId} // Passiamo la colonna target
                 onClose={() => setIsDialogOpen(false)}
                 onSave={handleSaveUnified}
                 onDelete={handleDeleteTask}
