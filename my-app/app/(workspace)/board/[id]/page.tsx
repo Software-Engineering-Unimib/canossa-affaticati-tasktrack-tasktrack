@@ -16,8 +16,8 @@ import { getBoardFromId } from '@/items/Board';
 
 // Importazione Componenti Custom
 import TaskCard from '@/app/components/KanbanBoard/TaskCard';
-import EditTaskDialog from '@/app/components/KanbanBoard/EditTaskDialog';
-import CreateTaskDialog from '@/app/components/KanbanBoard/CreateTaskDialog';
+// NOTA: Sostituiti CreateTaskDialog e EditTaskDialog con il nuovo componente unificato
+import TaskDialog from '@/app/components/KanbanBoard/TaskDialog';
 
 // Configurazione Colonne Kanban
 const columnsConfig: ColumnData[] = [
@@ -54,10 +54,10 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
     const [selectedPriorities, setSelectedPriorities] = useState<PriorityLevel[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-    // --- STATI MODIFICA/CREAZIONE TASK ---
-    const [editingTask, setEditingTask] = useState<Task | null>(null);
-    const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
-    const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+    // --- STATI DIALOG UNIFICATO ---
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
     // Recupero info board corrente
     const board = getBoardFromId(initialBoards, id);
@@ -72,14 +72,14 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
     // --- LOGICA FILTRAGGIO ---
     const filteredTasks = useMemo(() => {
         return tasks.filter(t => {
-            // 1. Filtro Testuale (Titolo o Nome di UNA delle categorie)
+            // 1. Filtro Testuale
             const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 t.categories.some(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
             // 2. Filtro Priorità
             const matchesPriority = selectedPriorities.length === 0 || selectedPriorities.includes(t.priority);
 
-            // 3. Filtro Categoria (ID) - Verifica se il task ha almeno una delle categorie selezionate
+            // 3. Filtro Categoria
             const matchesCategory = selectedCategories.length === 0 ||
                 t.categories.some(c => selectedCategories.includes(c.id.toString()));
 
@@ -133,24 +133,35 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
     // --- HANDLERS GESTIONE TASK ---
 
     // Apertura Modifica
-    const handleTaskClick = (task: Task) => {
-        setEditingTask(task);
-        setIsEditTaskOpen(true);
+    const openEditDialog = (task: Task) => {
+        setDialogMode('edit');
+        setSelectedTask(task);
+        setIsDialogOpen(true);
     };
 
-    // Salvataggio Modifica
-    const handleSaveTask = (updatedTask: Task) => {
-        setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    // Apertura Creazione
+    const openCreateDialog = () => {
+        setDialogMode('create');
+        setSelectedTask(null);
+        setIsDialogOpen(true);
+    };
+
+    // Gestione unificata Salvataggio (Create & Update)
+    const handleSaveUnified = (taskToSave: Task) => {
+        if (dialogMode === 'create') {
+            // Creazione: aggiungi in testa
+            setTasks(prev => [taskToSave, ...prev]);
+        } else {
+            // Modifica: sostituisci l'esistente
+            setTasks(prev => prev.map(t => t.id === taskToSave.id ? taskToSave : t));
+        }
+        // Il dialog viene chiuso internamente dal componente o possiamo forzarlo qui se necessario,
+        // ma TaskDialog chiama onClose dopo onSave, quindi qui aggiorniamo solo i dati.
     };
 
     // Eliminazione
     const handleDeleteTask = (taskId: string) => {
         setTasks(prev => prev.filter(t => t.id !== taskId));
-    };
-
-    // Creazione Nuovo Task
-    const handleCreateTask = (newTask: Task) => {
-        setTasks(prev => [newTask, ...prev]);
     };
 
     // Conta filtri attivi per badge UI
@@ -159,7 +170,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
     return (
         <div
             className="h-full flex flex-col p-6 lg:p-8 bg-slate-50 overflow-hidden"
-            onClick={() => setIsFilterOpen(false)} // Chiude menu filtri cliccando fuori
+            onClick={() => setIsFilterOpen(false)}
         >
 
             {/* HEADER BOARD */}
@@ -278,7 +289,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 
                     {/* Bottone Nuovo Task */}
                     <button
-                        onClick={() => setIsCreateTaskOpen(true)}
+                        onClick={openCreateDialog}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20"
                     >
                         <Plus className="w-4 h-4" />
@@ -341,7 +352,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
                                                 task={task}
                                                 isDragging={draggedTaskId === task.id}
                                                 onDragStart={handleDragStart}
-                                                onClick={handleTaskClick}
+                                                onClick={openEditDialog}
                                             />
                                         ))
                                     )}
@@ -352,22 +363,15 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
                 </div>
             </div>
 
-            {/* MODALE DI MODIFICA TASK */}
-            <EditTaskDialog
-                isOpen={isEditTaskOpen}
-                task={editingTask}
+            {/* MODALE UNIFICATO (CREATE / EDIT) */}
+            <TaskDialog
+                isOpen={isDialogOpen}
+                mode={dialogMode}
+                task={selectedTask}
                 boardCategories={board ? board.categories : []}
-                onClose={() => setIsEditTaskOpen(false)}
-                onSave={handleSaveTask}
+                onClose={() => setIsDialogOpen(false)}
+                onSave={handleSaveUnified}
                 onDelete={handleDeleteTask}
-            />
-
-            {/* MODALE DI CREAZIONE TASK */}
-            <CreateTaskDialog
-                isOpen={isCreateTaskOpen}
-                boardCategories={board ? board.categories : []}
-                onClose={() => setIsCreateTaskOpen(false)}
-                onCreate={handleCreateTask}
             />
 
         </div>
