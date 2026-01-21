@@ -76,7 +76,6 @@ export default function TaskDialog({
                 setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
                 setTargetColumn(task.columnId);
 
-                // CARICA DATI EXTRA (Commenti e Allegati)
                 loadExtraData(task.id);
             } else {
                 // CREATE MODE
@@ -93,11 +92,9 @@ export default function TaskDialog({
     }, [isOpen, task, mode, columnId, isEdit]);
 
     const loadExtraData = async (taskId: string) => {
-        // Carica commenti
         const c = await TaskModel.getComments(taskId);
         setComments(c);
 
-        // MODIFICA: Carica allegati freschi dal DB
         const a = await TaskModel.getAttachments(taskId);
         setAttachments(a);
     };
@@ -134,12 +131,16 @@ export default function TaskDialog({
         setIsSaving(true);
 
         try {
+            // Assegniamo l'utente corrente come assignee SOLO in creazione
+            // In modifica passiamo undefined per non sovrascrivere gli esistenti
+            const currentAssigneeIds = (!isEdit && user) ? [user.id] : undefined;
+
             const taskDataPayload = {
                 title,
                 description,
                 priority,
                 dueDate: dueDate ? new Date(dueDate) : new Date(),
-                assigneeIds: [],
+                assigneeIds: currentAssigneeIds,
                 categoryIds: selectedCategoryIds,
                 columnId: targetColumn
             };
@@ -147,16 +148,28 @@ export default function TaskDialog({
             let savedTask: Task | null = null;
 
             if (isEdit && task) {
+                // UPDATE
                 await TaskModel.updateTask(task.id, taskDataPayload);
                 savedTask = {
                     ...task,
                     ...taskDataPayload,
+                    // In update, assigneeIds è undefined nel payload, quindi manteniamo quelli vecchi del task
+                    assignees: task.assignees,
                     categories: boardCategories.filter(c => selectedCategoryIds.includes(c.id.toString())),
                     comments: comments.length,
                     attachments: attachments.length
                 };
             } else if (boardId) {
-                const created = await TaskModel.createTask(boardId, taskDataPayload);
+                // CREATE
+                // Qui TypeScript potrebbe lamentarsi se assigneeIds è opzionale nel payload ma obbligatorio in create.
+                // Forziamo l'array vuoto se undefined (anche se sopra abbiamo gestito la logica).
+                const createPayload = {
+                    ...taskDataPayload,
+                    assigneeIds: currentAssigneeIds || []
+                };
+
+                const created = await TaskModel.createTask(boardId, createPayload);
+
                 savedTask = {
                     id: String(created.id),
                     title: created.title,
@@ -165,7 +178,14 @@ export default function TaskDialog({
                     columnId: created.column_id as ColumnId,
                     dueDate: new Date(created.due_date),
                     categories: boardCategories.filter(c => selectedCategoryIds.includes(c.id.toString())),
-                    assignees: [],
+                    // Popoliamo ottimisticamente l'assignee per vederlo subito nella card
+                    assignees: user ? [{
+                        id: user.id,
+                        name: user.name || '',
+                        surname: user.surname || '',
+                        avatar_url: user.avatar_url || '',
+                        email: user.email || ''
+                    }] : [],
                     comments: 0,
                     attachments: 0,
                 };
@@ -201,8 +221,6 @@ export default function TaskDialog({
             if (isEdit && task) {
                 try {
                     const uploaded = await TaskModel.uploadAttachment(task.id, file);
-                    // Per visualizzarlo subito, aggiungiamo un URL pubblico placeholder o ricarichiamo
-                    // Qui ricarichiamo la lista allegati per avere l'URL corretto generato da getAttachments
                     const newAttachments = await TaskModel.getAttachments(task.id);
                     setAttachments(newAttachments);
                 } catch (e) {
