@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     X, Trash2, Save, Calendar, Tag, AlertCircle, AlignLeft, Layout,
     Check, Paperclip, UploadCloud, FileText, MessageSquare, Send, Columns,
-    Loader2, AlertTriangle // Aggiunta icona AlertTriangle per la conferma
+    Loader2, AlertTriangle
 } from 'lucide-react';
 
 import { Task, ColumnId } from '@/items/Task';
@@ -49,9 +49,9 @@ export default function TaskDialog({
     const [targetColumn, setTargetColumn] = useState<ColumnId>('todo');
 
     // --- STATI UI ---
-    const [isSaving, setIsSaving] = useState(false); // Loading salvataggio
-    const [isDeleting, setIsDeleting] = useState(false); // Loading eliminazione
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Overlay conferma eliminazione
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // --- STATI DATA EXTRA ---
     const [comments, setComments] = useState<TaskComment[]>([]);
@@ -63,7 +63,6 @@ export default function TaskDialog({
     // --- INIT ---
     useEffect(() => {
         if (isOpen) {
-            // Reset stati UI
             setIsSaving(false);
             setIsDeleting(false);
             setShowDeleteConfirm(false);
@@ -77,6 +76,7 @@ export default function TaskDialog({
                 setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
                 setTargetColumn(task.columnId);
 
+                // CARICA DATI EXTRA (Commenti e Allegati)
                 loadExtraData(task.id);
             } else {
                 // CREATE MODE
@@ -93,11 +93,13 @@ export default function TaskDialog({
     }, [isOpen, task, mode, columnId, isEdit]);
 
     const loadExtraData = async (taskId: string) => {
+        // Carica commenti
         const c = await TaskModel.getComments(taskId);
         setComments(c);
-        if ((task as any)?.attachmentsData) {
-            setAttachments((task as any).attachmentsData);
-        }
+
+        // MODIFICA: Carica allegati freschi dal DB
+        const a = await TaskModel.getAttachments(taskId);
+        setAttachments(a);
     };
 
     // --- HANDLERS ---
@@ -108,21 +110,16 @@ export default function TaskDialog({
         );
     };
 
-    // 1. Cliccando il cestino, attiviamo l'overlay di conferma
     const requestDelete = () => {
         setShowDeleteConfirm(true);
     };
 
-    // 2. Conferma effettiva dell'eliminazione
     const confirmDeleteTask = async () => {
         if (!isEdit || !onDelete || !task) return;
 
         setIsDeleting(true);
         try {
             await onDelete(task.id);
-            // onDelete nel padre gestisce già la logica e la chiusura,
-            // ma se è asincrona qui potremmo aspettare.
-            // Per sicurezza chiudiamo:
             onClose();
         } catch (error) {
             console.error(error);
@@ -204,11 +201,10 @@ export default function TaskDialog({
             if (isEdit && task) {
                 try {
                     const uploaded = await TaskModel.uploadAttachment(task.id, file);
-                    const att: TaskAttachment = {
-                        ...uploaded,
-                        publicUrl: ''
-                    };
-                    setAttachments([...attachments, att]);
+                    // Per visualizzarlo subito, aggiungiamo un URL pubblico placeholder o ricarichiamo
+                    // Qui ricarichiamo la lista allegati per avere l'URL corretto generato da getAttachments
+                    const newAttachments = await TaskModel.getAttachments(task.id);
+                    setAttachments(newAttachments);
                 } catch (e) {
                     console.error(e);
                     alert("Errore upload");
@@ -234,7 +230,7 @@ export default function TaskDialog({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col h-[90vh]">
 
-                {/* --- OVERLAY CONFERMA ELIMINAZIONE --- */}
+                {/* --- OVERLAY CONFERMA ELIMINAZIONE TASK --- */}
                 {showDeleteConfirm && (
                     <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-200">
                         <div className="bg-red-50 p-4 rounded-full mb-4">
@@ -284,7 +280,7 @@ export default function TaskDialog({
                     <div className="flex items-center gap-2">
                         {isEdit && onDelete && task && (
                             <button
-                                onClick={requestDelete} // Apre l'overlay invece del confirm browser
+                                onClick={requestDelete}
                                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                 title="Elimina Task"
                                 disabled={isSaving}
@@ -464,14 +460,27 @@ export default function TaskDialog({
                                                     <p className="text-sm font-medium text-slate-700 truncate">{file.name}</p>
                                                     <p className="text-xs text-slate-400">{(file.file_size / 1024).toFixed(1)} KB</p>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteAttachment(file.id, file.file_path)}
-                                                    disabled={isSaving}
-                                                    className="p-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all disabled:cursor-not-allowed"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {file.publicUrl && (
+                                                        <a
+                                                            href={file.publicUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Scarica"
+                                                        >
+                                                            <UploadCloud className="w-4 h-4 rotate-180" />
+                                                        </a>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteAttachment(file.id, file.file_path)}
+                                                        disabled={isSaving}
+                                                        className="p-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all disabled:cursor-not-allowed"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
