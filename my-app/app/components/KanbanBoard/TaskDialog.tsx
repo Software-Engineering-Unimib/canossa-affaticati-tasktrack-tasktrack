@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     X, Trash2, Save, Calendar, Tag, AlertCircle, AlignLeft, Layout,
     Check, Paperclip, UploadCloud, FileText, MessageSquare, Send, Columns,
-    Loader2, AlertTriangle // Aggiunta icona AlertTriangle per la conferma
+    Loader2, AlertTriangle
 } from 'lucide-react';
 
 import { Task, ColumnId } from '@/items/Task';
@@ -49,9 +49,9 @@ export default function TaskDialog({
     const [targetColumn, setTargetColumn] = useState<ColumnId>('todo');
 
     // --- STATI UI ---
-    const [isSaving, setIsSaving] = useState(false); // Loading salvataggio
-    const [isDeleting, setIsDeleting] = useState(false); // Loading eliminazione
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Overlay conferma eliminazione
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // --- STATI DATA EXTRA ---
     const [comments, setComments] = useState<TaskComment[]>([]);
@@ -63,7 +63,6 @@ export default function TaskDialog({
     // --- INIT ---
     useEffect(() => {
         if (isOpen) {
-            // Reset stati UI
             setIsSaving(false);
             setIsDeleting(false);
             setShowDeleteConfirm(false);
@@ -95,9 +94,9 @@ export default function TaskDialog({
     const loadExtraData = async (taskId: string) => {
         const c = await TaskModel.getComments(taskId);
         setComments(c);
-        if ((task as any)?.attachmentsData) {
-            setAttachments((task as any).attachmentsData);
-        }
+
+        const a = await TaskModel.getAttachments(taskId);
+        setAttachments(a);
     };
 
     // --- HANDLERS ---
@@ -108,21 +107,16 @@ export default function TaskDialog({
         );
     };
 
-    // 1. Cliccando il cestino, attiviamo l'overlay di conferma
     const requestDelete = () => {
         setShowDeleteConfirm(true);
     };
 
-    // 2. Conferma effettiva dell'eliminazione
     const confirmDeleteTask = async () => {
         if (!isEdit || !onDelete || !task) return;
 
         setIsDeleting(true);
         try {
             await onDelete(task.id);
-            // onDelete nel padre gestisce già la logica e la chiusura,
-            // ma se è asincrona qui potremmo aspettare.
-            // Per sicurezza chiudiamo:
             onClose();
         } catch (error) {
             console.error(error);
@@ -137,12 +131,16 @@ export default function TaskDialog({
         setIsSaving(true);
 
         try {
+            // Assegniamo l'utente corrente come assignee SOLO in creazione
+            // In modifica passiamo undefined per non sovrascrivere gli esistenti
+            const currentAssigneeIds = (!isEdit && user) ? [user.id] : undefined;
+
             const taskDataPayload = {
                 title,
                 description,
                 priority,
                 dueDate: dueDate ? new Date(dueDate) : new Date(),
-                assigneeIds: [],
+                assigneeIds: currentAssigneeIds,
                 categoryIds: selectedCategoryIds,
                 columnId: targetColumn
             };
@@ -150,16 +148,28 @@ export default function TaskDialog({
             let savedTask: Task | null = null;
 
             if (isEdit && task) {
+                // UPDATE
                 await TaskModel.updateTask(task.id, taskDataPayload);
                 savedTask = {
                     ...task,
                     ...taskDataPayload,
+                    // In update, assigneeIds è undefined nel payload, quindi manteniamo quelli vecchi del task
+                    assignees: task.assignees,
                     categories: boardCategories.filter(c => selectedCategoryIds.includes(c.id.toString())),
                     comments: comments.length,
                     attachments: attachments.length
                 };
             } else if (boardId) {
-                const created = await TaskModel.createTask(boardId, taskDataPayload);
+                // CREATE
+                // Qui TypeScript potrebbe lamentarsi se assigneeIds è opzionale nel payload ma obbligatorio in create.
+                // Forziamo l'array vuoto se undefined (anche se sopra abbiamo gestito la logica).
+                const createPayload = {
+                    ...taskDataPayload,
+                    assigneeIds: currentAssigneeIds || []
+                };
+
+                const created = await TaskModel.createTask(boardId, createPayload);
+
                 savedTask = {
                     id: String(created.id),
                     title: created.title,
@@ -168,7 +178,14 @@ export default function TaskDialog({
                     columnId: created.column_id as ColumnId,
                     dueDate: new Date(created.due_date),
                     categories: boardCategories.filter(c => selectedCategoryIds.includes(c.id.toString())),
-                    assignees: [],
+                    // Popoliamo ottimisticamente l'assignee per vederlo subito nella card
+                    assignees: user ? [{
+                        id: user.id,
+                        name: user.name || '',
+                        surname: user.surname || '',
+                        avatar_url: user.avatar_url || '',
+                        email: user.email || ''
+                    }] : [],
                     comments: 0,
                     attachments: 0,
                 };
@@ -204,11 +221,8 @@ export default function TaskDialog({
             if (isEdit && task) {
                 try {
                     const uploaded = await TaskModel.uploadAttachment(task.id, file);
-                    const att: TaskAttachment = {
-                        ...uploaded,
-                        publicUrl: ''
-                    };
-                    setAttachments([...attachments, att]);
+                    const newAttachments = await TaskModel.getAttachments(task.id);
+                    setAttachments(newAttachments);
                 } catch (e) {
                     console.error(e);
                     alert("Errore upload");
@@ -234,7 +248,7 @@ export default function TaskDialog({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col h-[90vh]">
 
-                {/* --- OVERLAY CONFERMA ELIMINAZIONE --- */}
+                {/* --- OVERLAY CONFERMA ELIMINAZIONE TASK --- */}
                 {showDeleteConfirm && (
                     <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-200">
                         <div className="bg-red-50 p-4 rounded-full mb-4">
@@ -284,7 +298,7 @@ export default function TaskDialog({
                     <div className="flex items-center gap-2">
                         {isEdit && onDelete && task && (
                             <button
-                                onClick={requestDelete} // Apre l'overlay invece del confirm browser
+                                onClick={requestDelete}
                                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                 title="Elimina Task"
                                 disabled={isSaving}
@@ -464,14 +478,27 @@ export default function TaskDialog({
                                                     <p className="text-sm font-medium text-slate-700 truncate">{file.name}</p>
                                                     <p className="text-xs text-slate-400">{(file.file_size / 1024).toFixed(1)} KB</p>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteAttachment(file.id, file.file_path)}
-                                                    disabled={isSaving}
-                                                    className="p-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all disabled:cursor-not-allowed"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {file.publicUrl && (
+                                                        <a
+                                                            href={file.publicUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Scarica"
+                                                        >
+                                                            <UploadCloud className="w-4 h-4 rotate-180" />
+                                                        </a>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteAttachment(file.id, file.file_path)}
+                                                        disabled={isSaving}
+                                                        className="p-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all disabled:cursor-not-allowed"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
