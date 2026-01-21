@@ -1,19 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Loader2 } from 'lucide-react';
+
+// Componenti UI
 import EditBoardDialog from "@/app/components/Board/EditBoardDialog";
-import CreateBoardDialog, {NewBoardData} from "@/app/components/Board/CreateBoardDialog";
+import CreateBoardDialog, { NewBoardData } from "@/app/components/Board/CreateBoardDialog";
 import BoardCard from "@/app/components/Board/BoardCard";
-import {initialBoards} from "@/public/datas";
-import {Board} from "@/public/Board";
+
+// Logica e Context
+import { useAuth } from '@/app/context/AuthContext';
+import { useBoards } from '@/app/context/BoardsContext'; // <--- USA IL NUOVO CONTEXT CONDIVISO
+import { BoardModel } from '@/models';
+import { Board } from '@/items/Board';
 
 export default function WorkspacePage() {
-    // --- STATI ---
-    const [boards, setBoards] = useState<Board[]>(initialBoards);
-    const [searchQuery, setSearchQuery] = useState('');
+    const { user } = useAuth();
 
-    // Stati per i Dialog
+    // USIAMO IL CONTEXT INVECE DI STATO LOCALE
+    // boards è condiviso, refreshBoards aggiorna tutti i componenti che usano il context
+    const { boards, isLoading, refreshBoards } = useBoards();
+
+    const [searchQuery, setSearchQuery] = useState('');
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [boardToEdit, setBoardToEdit] = useState<Board | null>(null);
 
@@ -25,51 +33,72 @@ export default function WorkspacePage() {
     // --- HANDLERS (CRUD) ---
 
     // 1. CREAZIONE
-    const handleCreateBoard = (data: NewBoardData) => {
-        const newBoard: Board = {
-            id: Date.now(), // ID temporaneo univoco
-            title: data.title,
-            description: data.description,
-            theme: data.theme,
-            icon: 'personal', // Default, potresti aggiungerlo al form di creazione
-            categories: data.categories,
-            stats: { deadlines: 0, inProgress: 0, completed: 0 },
-            guests: data.guests
-        };
-
-        setBoards([...boards, newBoard]);
-        setIsCreateDialogOpen(false);
+    const handleCreateBoard = async (data: NewBoardData) => {
+        try {
+            await BoardModel.createBoard(data.title, data.description, data.theme, data.icon);
+            await refreshBoards(); // Aggiorna Context -> Aggiorna Sidebar e Dashboard
+            setIsCreateDialogOpen(false);
+        } catch (error) {
+            console.error("Errore creazione:", error);
+            alert("Impossibile creare la bacheca.");
+        }
     };
 
     // 2. AGGIORNAMENTO
-    const handleUpdateBoard = (updatedData: Board) => {
-        setBoards(prevBoards =>
-            prevBoards.map(board => board.id === updatedData.id ? updatedData : board)
-        );
-        setBoardToEdit(null);
+    const handleUpdateBoard = async (updatedData: Board) => {
+        try {
+            await BoardModel.updateBoard(
+                updatedData.id,
+                updatedData.title,
+                updatedData.description,
+                updatedData.theme,
+                updatedData.icon
+            );
+            await refreshBoards(); // Aggiorna tutto
+            setBoardToEdit(null);
+        } catch (error) {
+            console.error("Errore aggiornamento:", error);
+            alert("Errore durante la modifica.");
+        }
     };
 
     // 3. ELIMINAZIONE
-    const handleDeleteBoard = (id: string | number) => {
-        setBoards(prevBoards => prevBoards.filter(board => board.id !== id));
-        setBoardToEdit(null); // Chiude il dialog se aperto
+    const handleDeleteBoard = async (id: string | number) => {
+        if(!confirm("Sei sicuro di voler eliminare questa bacheca?")) return;
+
+        try {
+            await BoardModel.deleteBoard(id);
+            await refreshBoards(); // Aggiorna tutto
+            setBoardToEdit(null);
+        } catch (error) {
+            console.error("Errore eliminazione:", error);
+            alert("Errore durante l'eliminazione.");
+        }
     };
+
+    // --- RENDER ---
+    if (isLoading && boards.length === 0) {
+        return (
+            <div className="flex h-full w-full items-center justify-center min-h-[50vh]">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 lg:p-10 w-full max-w-7xl mx-auto space-y-8">
 
-            {/* --- HEADER --- */}
+            {/* HEADER */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        Buongiorno, Mario! 👋
+                        Buongiorno, {user?.name || 'Utente'}! 👋
                     </h1>
                     <p className="text-slate-500 mt-2 text-lg">
                         Ecco una panoramica dei tuoi spazi di lavoro attivi.
                     </p>
                 </div>
 
-                {/* Barra di Ricerca */}
                 <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <input
@@ -82,10 +111,10 @@ export default function WorkspacePage() {
                 </div>
             </header>
 
-            {/* --- GRIGLIA BACHECHE --- */}
+            {/* GRIGLIA */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-                {/* CARD 1: TASTO "CREA NUOVA" */}
+                {/* Tasto Crea */}
                 <button
                     onClick={() => setIsCreateDialogOpen(true)}
                     className="flex flex-col items-center justify-center h-full min-h-[180px] rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-white hover:border-blue-400 hover:shadow-md transition-all group animate-in fade-in duration-500"
@@ -94,48 +123,40 @@ export default function WorkspacePage() {
                         <Plus className="w-7 h-7 text-slate-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                     <span className="font-semibold text-slate-500 group-hover:text-blue-600 transition-colors">
-            Crea Nuova Bacheca
-          </span>
+                        Crea Nuova Bacheca
+                    </span>
                 </button>
 
-                {/* MAPPATURA BACHECHE */}
+                {/* Card Bacheche */}
                 {filteredBoards.map((board) => (
                     <BoardCard
                         key={board.id}
-                        {...board} // Passa id, title, category, theme, stats
-
-                        // Apertura Dialog Modifica
+                        {...board}
                         onEdit={() => setBoardToEdit(board)}
                     />
                 ))}
 
-                {/* FEEDBACK NESSUN RISULTATO */}
                 {filteredBoards.length === 0 && searchQuery && (
                     <div className="col-span-full text-center py-12 text-slate-400 italic">
                         Nessuna bacheca trovata per "{searchQuery}"
                     </div>
                 )}
-
             </div>
 
-            {/* --- DIALOGS --- */}
-
-            {/* 1. Dialog Creazione */}
+            {/* DIALOGS */}
             <CreateBoardDialog
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
                 onCreate={handleCreateBoard}
             />
 
-            {/* 2. Dialog Modifica */}
             <EditBoardDialog
-                isOpen={!!boardToEdit}        // Aperto se boardToEdit non è null
-                initialData={boardToEdit}     // Passa i dati attuali
+                isOpen={!!boardToEdit}
+                initialData={boardToEdit}
                 onClose={() => setBoardToEdit(null)}
                 onUpdate={handleUpdateBoard}
                 onDelete={handleDeleteBoard}
             />
-
         </div>
     );
 }

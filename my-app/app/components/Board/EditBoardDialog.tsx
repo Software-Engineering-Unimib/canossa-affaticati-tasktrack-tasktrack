@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Trash2, Check, Loader2, Save, LayoutGrid, ChevronDown } from 'lucide-react';
-import { Board, BoardTheme, themeBoardOptions } from "@/public/Board";
-import { Icon, iconBoardOptions } from '@/public/BoardIcon';
+import { Board, BoardTheme, themeBoardOptions } from "@/items/Board";
+import { Icon, iconBoardOptions } from '@/items/BoardIcon';
 
 interface EditBoardDialogProps {
     isOpen: boolean;

@@ -1,29 +1,52 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Search,
     LayoutGrid,
-    Tag
+    Tag,
+    Loader2
 } from 'lucide-react';
 
-// Import Dati e Tipi
-import { initialBoards } from '@/public/datas';
-import { Board } from '@/public/Board';
-import { Category } from '@/public/Category';
+// Import Logica Reale
+import { useAuth } from '@/app/context/AuthContext';
+import { BoardModel, CategoryModel } from '@/models';
+import { Board } from '@/items/Board';
+import { Category } from '@/items/Category';
 
 // Import Componenti
 import CategoryCard from '@/app/components/categories/CategoryCard';
 import EditCategoryDialog from '@/app/components/categories/EditCategoryDialog';
 
 export default function CategoriesPage() {
-    // Stato locale delle bacheche (inizializzato con i dati mock)
-    const [boards, setBoards] = useState<Board[]>(initialBoards);
+    const { user } = useAuth();
+
+    // --- STATI ---
+    const [boards, setBoards] = useState<Board[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
     // --- STATO DIALOG ---
-    // Tiene traccia di quale bacheca si sta modificando. Se null, il dialog è chiuso.
     const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+
+    // --- FETCH DATI ---
+    const fetchData = async () => {
+        if (!user) return;
+        setIsLoading(true);
+        try {
+            // Scarichiamo le bacheche (che includono già le categorie grazie al Model)
+            const data = await BoardModel.getAllBoards();
+            setBoards(data);
+        } catch (error) {
+            console.error("Errore caricamento categorie:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, [user]);
 
     // --- HANDLERS ---
 
@@ -37,53 +60,70 @@ export default function CategoriesPage() {
     };
 
     // 2. Salvataggio Categoria (Creazione o Modifica)
-    // Questa funzione viene passata al Dialog e gestisce entrambi i casi
-    const handleSaveCategory = (updatedCategory: Category) => {
+    const handleSaveCategory = async (categoryData: Category) => {
         if (!activeBoardId) return;
 
-        setBoards(prev => prev.map(board => {
-            // Troviamo la bacheca attiva
-            if (board.id !== activeBoardId) return board;
+        try {
+            // Se la categoria ha un ID numerico (o stringa numerica valida), è un update.
+            // Se l'ID è temporaneo (generato dal frontend) o mancante, è una create.
+            const isExisting = categoryData.id && !String(categoryData.id).startsWith('temp');
 
-            // Cerchiamo se la categoria esiste già
-            const existingIndex = board.categories.findIndex(c => c.id === updatedCategory.id);
-            let newCategories;
-
-            if (existingIndex >= 0) {
-                // MODIFICA: Sostituiamo la categoria esistente
-                newCategories = [...board.categories];
-                newCategories[existingIndex] = updatedCategory;
+            if (isExisting) {
+                // UPDATE
+                await CategoryModel.updateCategory(categoryData.id, {
+                    name: categoryData.name,
+                    color: categoryData.color
+                });
             } else {
-                // CREAZIONE: Aggiungiamo la nuova categoria
-                newCategories = [...board.categories, updatedCategory];
+                // CREATE
+                await CategoryModel.createCategory(
+                    activeBoardId,
+                    categoryData.name,
+                    categoryData.color
+                );
             }
 
-            return { ...board, categories: newCategories };
-        }));
+            // Ricarica i dati per vedere le modifiche
+            await fetchData();
+
+        } catch (error) {
+            console.error("Errore salvataggio categoria:", error);
+            alert("Errore durante il salvataggio.");
+        }
     };
 
     // 3. Eliminazione Categoria
-    const handleDeleteCategory = (categoryId: string | number) => {
+    const handleDeleteCategory = async (categoryId: string | number) => {
         if (!activeBoardId) return;
 
-        setBoards(prev => prev.map(board => {
-            if (board.id !== activeBoardId) return board;
-            return {
-                ...board,
-                categories: board.categories.filter(c => c.id !== categoryId)
-            };
-        }));
+        // Conferma extra per sicurezza
+        if(!confirm("Vuoi davvero eliminare questa etichetta?")) return;
+
+        try {
+            await CategoryModel.deleteCategory(categoryId);
+            await fetchData(); // Ricarica i dati
+        } catch (error) {
+            console.error("Errore eliminazione categoria:", error);
+            alert("Errore durante l'eliminazione.");
+        }
     };
 
-    // --- FILTRAGGIO E DATI ---
-
-    // Filtra le bacheche in base alla ricerca
+    // --- FILTRAGGIO ---
     const filteredBoards = boards.filter(board =>
         board.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // Recupera l'oggetto della bacheca attiva per passarlo al dialog
     const activeBoard = boards.find(b => b.id === activeBoardId);
+
+    // --- RENDER LOADING ---
+    if (isLoading && boards.length === 0) {
+        return (
+            <div className="flex h-full w-full items-center justify-center min-h-[50vh]">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 lg:p-10 max-w-7xl mx-auto pb-20 space-y-8">
@@ -117,7 +157,9 @@ export default function CategoriesPage() {
             {filteredBoards.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl">
                     <LayoutGrid className="w-12 h-12 text-slate-300 mb-3" />
-                    <p className="text-slate-500 font-medium">Nessuna bacheca trovata</p>
+                    <p className="text-slate-500 font-medium">
+                        {searchQuery ? `Nessuna bacheca trovata per "${searchQuery}"` : "Non hai ancora bacheche attive."}
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

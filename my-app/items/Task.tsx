@@ -11,7 +11,7 @@ export interface Task {
     priority: PriorityLevel;
     columnId: ColumnId;
     dueDate: Date;
-    assignees?: string[];
+    assignees: TaskAssignees[];
     comments: number;
     attachments: number;
 }
@@ -20,4 +20,13 @@ export interface ColumnData {
     id: ColumnId;
     title: string;
     color: string;
+}
+
+export interface TaskAssignees {
+    id: string       // UUID
+    name: string
+    surname: string
+    email?: string   // Preso da auth.users
+    avatar_url?: string
+    created_at?: string
 }

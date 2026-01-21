@@ -9,21 +9,23 @@ import {
     AlertCircle,
     CalendarDays
 } from 'lucide-react';
-import { Task } from '@/public/Task';
-import { getPriorityStyles } from '@/public/Priority';
-import { themeCategoryOptions } from '@/public/Category';
+import { Task } from '@/items/Task';
+import { getPriorityStyles } from '@/items/Priority';
+import { themeCategoryOptions } from '@/items/Category';
 
 interface TaskCardProps {
     task: Task;
-    isDragging: boolean;
-    onDragStart: (e: React.DragEvent, taskId: string) => void;
+    isDragging?: boolean; // Reso opzionale per compatibilità
+    onDragStart?: (e: React.DragEvent, taskId: string) => void;
     onClick: (task: Task) => void;
 }
 
 export default function TaskCard({ task, isDragging, onDragStart, onClick }: TaskCardProps) {
 
     // Logica helper per colore data
-    const getDateInfo = (dateObj: Date | string, priority: string) => {
+    const getDateInfo = (dateObj: Date | string | undefined, priority: string) => {
+        if (!dateObj) return { color: 'text-slate-400', icon: Clock };
+
         const dueDate = new Date(dateObj);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -40,8 +42,8 @@ export default function TaskCard({ task, isDragging, onDragStart, onClick }: Tas
 
     return (
         <div
-            draggable
-            onDragStart={(e) => onDragStart(e, task.id)}
+            draggable={!!onDragStart}
+            onDragStart={(e) => onDragStart && onDragStart(e, task.id)}
             onClick={() => onClick(task)}
             className={`
                 group bg-white p-4 rounded-xl shadow-sm border border-slate-100 cursor-pointer hover:shadow-md transition-all relative
@@ -54,12 +56,6 @@ export default function TaskCard({ task, isDragging, onDragStart, onClick }: Tas
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${getPriorityStyles(task.priority)}`}>
                     {task.priority}
                 </span>
-                <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                    <MoreHorizontal className="w-4 h-4" />
-                </button>
             </div>
 
             {/* Titolo e Descrizione */}
@@ -77,7 +73,7 @@ export default function TaskCard({ task, isDragging, onDragStart, onClick }: Tas
                 {task.categories.map((cat) => (
                     <span
                         key={cat.id}
-                        className={`inline-block px-2 py-0.5 text-[10px] font-medium rounded border border-slate-200 ${themeCategoryOptions.find(opt => opt.value === cat.color)?.class}`}
+                        className={`inline-block px-2 py-0.5 text-[10px] font-medium rounded border border-slate-200 ${themeCategoryOptions.find(opt => opt.value === cat.color)?.class || 'bg-slate-100'}`}
                     >
                         {cat.name}
                     </span>
@@ -89,14 +85,15 @@ export default function TaskCard({ task, isDragging, onDragStart, onClick }: Tas
                 <div className={`flex items-center gap-1.5 text-xs font-medium ${dateColor}`}>
                     <DateIcon className="w-3.5 h-3.5" />
                     <span>
-                        {task.dueDate instanceof Date
-                            ? task.dueDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
-                            : task.dueDate}
+                        {task.dueDate
+                            ? new Date(task.dueDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+                            : 'No date'}
                     </span>
                 </div>
 
                 <div className="flex items-center gap-3 text-slate-400">
-                    {(task.comments > 0) && (
+                    {/* Usiamo stats.comments se presente (dal DB), altrimenti comments (dal tipo frontend vecchio) */}
+                    {(task.comments > 0 ) && (
                         <div className="flex items-center gap-1 text-xs">
                             <MessageSquare className="w-3.5 h-3.5" />
                             <span>{task.comments}</span>
@@ -109,7 +106,7 @@ export default function TaskCard({ task, isDragging, onDragStart, onClick }: Tas
                         </div>
                     )}
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-[9px] text-white flex items-center justify-center font-bold">
-                        M
+                        {task.assignees.length > 0 ? task.assignees[0].name.charAt(0) : 'U'}
                     </div>
                 </div>
             </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
     LayoutDashboard,
     Tags,
@@ -14,18 +14,23 @@ import {
     Menu,
     X,
     LucideIcon,
-    LogOut
+    LogOut,
+    User
 } from 'lucide-react';
 
-// Import Componenti e Dati
+// Import Componenti UI
 import LogoMobile from "@/app/components/logo/logoMobile";
 import LogoDesktop from "@/app/components/logo/logoDesktop";
 import SidebarBoardItem from "@/app/components/sidebar/SidebarBoardItem";
 import CreateBoardDialog, { NewBoardData } from "@/app/components/Board/CreateBoardDialog";
-import LogoutDialog from '@/app/components/auth/LogoutDialog'; // <--- IMPORT DIALOG LOGOUT
-import { initialBoards } from "@/public/datas";
-import { getClassByTheme } from "@/public/Board";
+import LogoutDialog from '@/app/components/auth/LogoutDialog';
+
+// Import Logica e Context
+import { useAuth } from '@/app/context/AuthContext';
+import { useBoards } from '@/app/context/BoardsContext'; // <--- USA IL NUOVO CONTEXT CONDIVISO
 import { useFocus } from "@/app/context/FocusContext";
+import { BoardModel } from '@/models';
+import { getClassByTheme } from "@/items/Board";
 
 interface NavItemProps {
     href: string;
@@ -34,50 +39,54 @@ interface NavItemProps {
     active?: boolean;
 }
 
+// Helper per i link di navigazione
+const NavItem: React.FC<NavItemProps> = ({ href, icon: Icon, label, active = false }) => (
+    <Link
+        href={href}
+        className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 mb-1
+            ${active
+            ? 'bg-blue-50 text-blue-700'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        }`}
+    >
+        <Icon className={`w-5 h-5 mr-3 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+        {label}
+        {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
+    </Link>
+);
+
 export default function Sidebar() {
     const pathname = usePathname();
-    const router = useRouter();
 
-    // --- STATI MENU & INTERAZIONE ---
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
-    const [isBoardsOpen, setIsBoardsOpen] = useState<boolean>(true);
-
-    // --- STATI DIALOGS ---
-    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false); // <--- NUOVO STATO
-
-    // Context Focus Mode
+    // --- HOOKS ---
+    const { user, signOut } = useAuth();
     const { isFocusMode, toggleFocusMode } = useFocus();
 
+    // USIAMO IL CONTEXT PER LE BACHECHE (Dati condivisi con Dashboard)
+    const { boards, isLoading: isLoadingBoards, refreshBoards } = useBoards();
+
+    // --- STATI UI ---
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+    const [isBoardsOpen, setIsBoardsOpen] = useState<boolean>(true);
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+
     // Gestione Creazione Bacheca
-    const handleCreateBoard = (data: NewBoardData) => {
-        console.log('Nuova bacheca creata:', data);
-        setIsCreateDialogOpen(false);
+    const handleCreateBoard = async (data: NewBoardData) => {
+        try {
+            await BoardModel.createBoard(data.title,data.description, data.theme, data.icon);
+            await refreshBoards(); // Aggiorna sia Sidebar che Dashboard
+            setIsCreateDialogOpen(false);
+        } catch (error) {
+            console.error("Errore creazione:", error);
+        }
     };
 
     // Gestione Logout
-    const handleLogout = () => {
-        console.log('Logout effettuato');
-        // Qui inserisci la logica di logout reale (es. clear cookies/token)
+    const handleLogout = async () => {
+        await signOut();
         setIsLogoutDialogOpen(false);
-        router.push('/login');
     };
-
-    // Componente Link Navigazione
-    const NavItem: React.FC<NavItemProps> = ({ href, icon: Icon, label, active = false }) => (
-        <Link
-            href={href}
-            className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 mb-1
-            ${active
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            }`}
-        >
-            <Icon className={`w-5 h-5 mr-3 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-            {label}
-            {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
-        </Link>
-    );
 
     return (
         <>
@@ -148,7 +157,15 @@ export default function Sidebar() {
 
                         {isBoardsOpen && (
                             <div className="space-y-1 animate-in slide-in-from-top-2 duration-200">
-                                {initialBoards.map((board) => (
+                                {/* Loading State */}
+                                {isLoadingBoards && (
+                                    <div className="px-3 py-2 text-xs text-gray-400 italic">
+                                        Caricamento...
+                                    </div>
+                                )}
+
+                                {/* Lista Bacheche Reale */}
+                                {!isLoadingBoards && boards.map((board) => (
                                     <SidebarBoardItem
                                         key={board.id}
                                         id={board.id}
@@ -157,6 +174,7 @@ export default function Sidebar() {
                                     />
                                 ))}
 
+                                {/* Tasto Crea Nuova */}
                                 <button
                                     className="w-full flex items-center px-3 py-2 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-dashed border-gray-200 hover:border-blue-200 mt-2"
                                     onClick={() => setIsCreateDialogOpen(true)}
@@ -191,21 +209,36 @@ export default function Sidebar() {
 
                     <div className="h-px bg-gray-200 my-2"></div>
 
-                    {/* Profilo Utente con Logout */}
+                    {/* Profilo Utente Dinamico */}
                     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all group">
                         <div className="flex items-center flex-1 min-w-0">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm shrink-0">
-                                MR
-                            </div>
+                            {/* Avatar */}
+                            {user?.avatar_url ? (
+                                <img
+                                    src={user.avatar_url}
+                                    alt="Avatar"
+                                    className="w-9 h-9 rounded-full object-cover border border-blue-200 shadow-sm shrink-0"
+                                />
+                            ) : (
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm shrink-0">
+                                    {user?.name?.charAt(0).toUpperCase() || <User className="w-4 h-4"/>}
+                                </div>
+                            )}
+
+                            {/* Info Testuali */}
                             <div className="ml-3 flex-1 overflow-hidden">
-                                <p className="text-sm font-medium text-gray-900 truncate">Mario Rossi</p>
-                                <p className="text-xs text-gray-500 truncate">mario.r@studenti.it</p>
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                    {user ? `${user.name} ${user.surname}` : 'Caricamento...'}
+                                </p>
+                                <p className="text-xs text-gray-500 truncate">
+                                    {user?.email || ''}
+                                </p>
                             </div>
                         </div>
 
                         {/* Tasto Logout */}
                         <button
-                            onClick={() => setIsLogoutDialogOpen(true)} // <--- APRE DIALOG
+                            onClick={() => setIsLogoutDialogOpen(true)}
                             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                             title="Disconnettiti"
                         >
