@@ -106,7 +106,7 @@ export default function TaskCard({ task, isDragging, onDragStart, onClick }: Tas
                         </div>
                     )}
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-[9px] text-white flex items-center justify-center font-bold">
-                        {task.assignees.length > 0 ? task.assignees[0].name.charAt(0) : 'U'}
+                        {task.assignees.length > 0 ? task.assignees[0].name.charAt(0).concat(task.assignees[0].surname.charAt(0)) : 'NN'}
                     </div>
                 </div>
             </div>

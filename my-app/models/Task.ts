@@ -225,6 +225,32 @@ export class TaskModel {
         await supabase.from('Attachments').delete().eq('id', attachmentId);
     }
 
+    // NUOVO METODO: Scarica gli allegati specifici di un task
+    static async getAttachments(taskId: string | number): Promise<TaskAttachment[]> {
+        const { data, error } = await supabase
+            .from('Attachments')
+            .select('*')
+            .eq('task_id', taskId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Errore fetch attachments:', error);
+            return [];
+        }
+
+        // Genera URL pubblici per ogni file
+        return data.map((att: any) => {
+            const { data: publicUrlData } = supabase.storage
+                .from('task-attachments')
+                .getPublicUrl(att.file_path);
+
+            return {
+                ...att,
+                publicUrl: publicUrlData.publicUrl
+            };
+        });
+    }
+
     // --- GESTIONE COMMENTI ---
 
     static async addComment(taskId: string | number, text: string) {
