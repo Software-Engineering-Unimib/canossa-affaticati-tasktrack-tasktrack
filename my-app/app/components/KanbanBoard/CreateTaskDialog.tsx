@@ -131,7 +131,7 @@ export default function CreateTaskDialog({
             categories: selectedCategories,
             columnId: targetColumn,
             dueDate: dueDate ? new Date(dueDate) : new Date(),
-            comments: comments.length, // Salviamo il numero di commenti inseriti
+            comments: comments.length,
             attachments: attachments.length,
             assignees: []
         };
@@ -145,7 +145,7 @@ export default function CreateTaskDialog({
         setSelectedCategoryIds([]);
         setDueDate('');
         setAttachments([]);
-        setComments([]); // Reset commenti
+        setComments([]); 
         setNewComment('');
         setTargetColumn('todo');
 
