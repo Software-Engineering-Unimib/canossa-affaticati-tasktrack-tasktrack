@@ -37,7 +37,7 @@ export default function UpdatePasswordPage() {
       
       // Dopo 2 secondi portiamo l'utente alla dashboard o al login
       setTimeout(() => {
-        router.push('/dashboard'); // O dove vuoi tu
+        router.push('/login'); // O dove vuoi tu
       }, 2000);
 
     } catch (error: any) {
