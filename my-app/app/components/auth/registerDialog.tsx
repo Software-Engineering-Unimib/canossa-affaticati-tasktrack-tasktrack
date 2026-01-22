@@ -1,120 +1,164 @@
+/**
+ * @fileoverview Dialog di registrazione utente.
+ *
+ * Gestisce il flusso completo di registrazione con validazione.
+ *
+ * @module components/auth/registerDialog
+ */
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { X, Mail, Lock, Eye, EyeOff, User, Loader2, ArrowRight, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
+/**
+ * Props del componente.
+ */
 interface RegisterDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    // Callback opzionale se vuoi fare qualcosa dopo il successo (es. redirect o mostrare un altro avviso)
     onRegisterSuccess?: () => void;
 }
 
-export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: RegisterDialogProps) {
-    // Stati del Form
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-    });
+/**
+ * Stato del form di registrazione.
+ */
+interface FormData {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+}
 
-    // Stati di UI
+/**
+ * Stato iniziale del form.
+ */
+const INITIAL_FORM_DATA: FormData = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+};
+
+/**
+ * Lunghezza minima della password.
+ */
+const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Messaggi di errore.
+ */
+const ERROR_MESSAGES = {
+    PASSWORD_MISMATCH: 'Le password non coincidono.',
+    PASSWORD_TOO_SHORT: `La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`,
+    GENERIC_ERROR: 'Si è verificato un errore. Riprova più tardi.',
+} as const;
+
+/**
+ * Dialog di registrazione.
+ */
+export default function RegisterDialog({
+                                           isOpen,
+                                           onClose,
+                                           onRegisterSuccess
+                                       }: RegisterDialogProps): React.ReactElement | null {
+    // Form state
+    const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
+
+    // UI state
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [isSuccess, setIsSuccess] = useState(false); // Per mostrare lo stato di successo
+    const [isSuccess, setIsSuccess] = useState(false);
 
-    // Se chiuso, non renderizzare
     if (!isOpen) return null;
 
-    // Helper per aggiornare i campi
+    /**
+     * Aggiorna un campo del form.
+     */
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-        if (error) setError(''); // Pulisci errori mentre l'utente scrive
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        if (error) setError('');
     };
 
-    // Handler di sottomissione
+    /**
+     * Valida il form.
+     */
+    const validateForm = (): string | null => {
+        if (formData.password !== formData.confirmPassword) {
+            return ERROR_MESSAGES.PASSWORD_MISMATCH;
+        }
+        if (formData.password.length < MIN_PASSWORD_LENGTH) {
+            return ERROR_MESSAGES.PASSWORD_TOO_SHORT;
+        }
+        return null;
+    };
+
+    /**
+     * Gestisce l'invio del form.
+     */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        // Validazione Base
-        if (formData.password !== formData.confirmPassword) {
-            setError('Le password non coincidono.');
+        const validationError = validateForm();
+        if (validationError) {
+            setError(validationError);
             return;
         }
-        if (formData.password.length < 8) {
-            setError('La password deve avere almeno 8 caratteri.');
-            return;
-        }
-        // Qui potresti aggiungere regex per validare l'email studentesca
 
         setIsLoading(true);
 
         try {
-            // SIMULAZIONE CHIAMATA API
+            // TODO: Implementare chiamata API reale
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            console.log('Dati registrazione:', formData);
-
-            // Successo!
             setIsSuccess(true);
-            if (onRegisterSuccess) onRegisterSuccess();
+            onRegisterSuccess?.();
 
-            // Chiudi automaticamente dopo un breve delay per mostrare il successo
+            // Auto-chiusura dopo successo
             setTimeout(() => {
-                onClose();
-                resetForm();
+                handleClose();
             }, 2000);
-
-        } catch (err) {
-            setError('Si è verificato un errore. Riprova più tardi.');
+        } catch {
+            setError(ERROR_MESSAGES.GENERIC_ERROR);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const resetForm = () => {
-        setFormData({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
+    /**
+     * Resetta il form e chiude il dialog.
+     */
+    const handleClose = useCallback(() => {
+        setFormData(INITIAL_FORM_DATA);
         setIsSuccess(false);
         setError('');
-    };
+        onClose();
+    }, [onClose]);
 
-    // --- CONTENUTO DEL DIALOG ---
-
-    // Stato di SUCCESSO
+    // Render success state
     if (isSuccess) {
-        return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center animate-in zoom-in-95 duration-200 flex flex-col items-center">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                        <CheckCircle className="w-8 h-8 text-green-600 animate-bounce" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Account Creato!</h2>
-                    <p className="text-slate-500 mb-6">
-                        Ti abbiamo inviato una email di conferma. <br/> Preparati ad organizzare il tuo studio.
-                    </p>
-                    <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                </div>
-            </div>
-        );
+        return <SuccessOverlay />;
     }
 
-    // Stato normale (FORM)
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
-
-            {/* Container Dialog */}
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+        >
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto animate-in zoom-in-95 duration-200 my-8">
-
-                {/* Tasto Chiudi */}
+                {/* Tasto chiudi */}
                 <button
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10"
+                    aria-label="Chiudi"
                 >
                     <X className="w-5 h-5" />
                 </button>
@@ -122,142 +166,83 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                 <div className="p-8 pt-10 pb-6">
                     {/* Header */}
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold text-slate-900">Crea il tuo account</h2>
+                        <h2 className="text-2xl font-bold text-slate-900">
+                            Crea il tuo account
+                        </h2>
                         <p className="text-slate-500 mt-2 text-sm">
                             Inizia a gestire i tuoi esami con TaskTrack.
                         </p>
                     </div>
 
-                    {/* Messaggio di Errore */}
-                    {error && (
-                        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-medium text-center animate-in slide-in-from-top-2">
-                            {error}
-                        </div>
-                    )}
+                    {/* Errore */}
+                    {error && <ErrorAlert message={error} />}
 
-                    {/* FORM */}
+                    {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-5">
-
-                        {/* Nome e Cognome (Griglia su desktop) */}
+                        {/* Nome e Cognome */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-sm font-semibold text-slate-700 ml-1">Nome</label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                    <input
-                                        name="firstName"
-                                        type="text"
-                                        required
-                                        value={formData.firstName}
-                                        onChange={handleChange}
-                                        placeholder="Mario"
-                                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-sm font-semibold text-slate-700 ml-1">Cognome</label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                    <input
-                                        name="lastName"
-                                        type="text"
-                                        required
-                                        value={formData.lastName}
-                                        onChange={handleChange}
-                                        placeholder="Rossi"
-                                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                            </div>
+                            <TextInput
+                                name="firstName"
+                                label="Nome"
+                                placeholder="Mario"
+                                value={formData.firstName}
+                                onChange={handleChange}
+                                icon={User}
+                                required
+                            />
+                            <TextInput
+                                name="lastName"
+                                label="Cognome"
+                                placeholder="Rossi"
+                                value={formData.lastName}
+                                onChange={handleChange}
+                                icon={User}
+                                required
+                            />
                         </div>
 
                         {/* Email */}
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-slate-700 ml-1">Email Istituzionale</label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <input
-                                    name="email"
-                                    type="email"
-                                    required
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="m.rossi@studenti.uni.it"
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                />
-                            </div>
-                        </div>
+                        <TextInput
+                            name="email"
+                            label="Email Istituzionale"
+                            type="email"
+                            placeholder="m.rossi@studenti.uni.it"
+                            value={formData.email}
+                            onChange={handleChange}
+                            icon={Mail}
+                            required
+                        />
 
                         {/* Password */}
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <input
-                                    name="password"
-                                    type={showPassword ? "text" : "password"}
-                                    required
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="Almeno 8 caratteri"
-                                    className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                                >
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                </button>
-                            </div>
-                        </div>
+                        <PasswordInput
+                            name="password"
+                            label="Password"
+                            placeholder="Almeno 8 caratteri"
+                            value={formData.password}
+                            onChange={handleChange}
+                            showPassword={showPassword}
+                            onToggle={() => setShowPassword(prev => !prev)}
+                        />
 
                         {/* Conferma Password */}
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-slate-700 ml-1">Conferma Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <input
-                                    name="confirmPassword"
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    required
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    placeholder="Ripeti la password"
-                                    className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                                >
-                                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                </button>
-                            </div>
-                        </div>
+                        <PasswordInput
+                            name="confirmPassword"
+                            label="Conferma Password"
+                            placeholder="Ripeti la password"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            showPassword={showConfirmPassword}
+                            onToggle={() => setShowConfirmPassword(prev => !prev)}
+                        />
 
-                        {/* Termini e Condizioni (Opzionale) */}
-                        <div className="flex items-start">
-                            <div className="flex items-center h-5">
-                                <input
-                                    id="terms"
-                                    type="checkbox"
-                                    required
-                                    className="w-4 h-4 border border-slate-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 text-blue-600"
-                                />
-                            </div>
-                            <label htmlFor="terms" className="ml-2 text-xs text-slate-500">
-                                Accetto i <Link href="/terms" className="text-blue-600 hover:underline">Termini di Servizio</Link> e la <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>.
-                            </label>
-                        </div>
+                        {/* Termini */}
+                        <TermsCheckbox />
 
-
-                        {/* Submit Button */}
+                        {/* Submit */}
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2 shadow-lg shadow-slate-900/20"
+                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all disabled:opacity-70"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -270,15 +255,185 @@ export default function RegisterDialog({ isOpen, onClose, onRegisterSuccess }: R
                         </button>
                     </form>
 
-                    {/* Footer Login Link */}
+                    {/* Footer */}
                     <div className="text-center mt-6 text-sm text-slate-600">
                         Hai già un account?{' '}
-                        <button onClick={onClose} className="font-semibold text-blue-600 hover:text-blue-500 hover:underline">
+                        <button
+                            onClick={handleClose}
+                            className="font-semibold text-blue-600 hover:text-blue-500 hover:underline"
+                        >
                             Accedi invece
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPONENTI INTERNI
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Overlay di successo.
+ */
+function SuccessOverlay() {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center animate-in zoom-in-95 duration-200 flex flex-col items-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <CheckCircle className="w-8 h-8 text-green-600 animate-bounce" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                    Account Creato!
+                </h2>
+                <p className="text-slate-500 mb-6">
+                    Ti abbiamo inviato una email di conferma.
+                    <br />
+                    Preparati ad organizzare il tuo studio.
+                </p>
+                <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Alert di errore.
+ */
+function ErrorAlert({ message }: { message: string }) {
+    return (
+        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-medium text-center animate-in slide-in-from-top-2">
+            {message}
+        </div>
+    );
+}
+
+/**
+ * Input testuale con icona.
+ */
+function TextInput({
+                       name,
+                       label,
+                       type = 'text',
+                       placeholder,
+                       value,
+                       onChange,
+                       icon: Icon,
+                       required = false,
+                   }: {
+    name: string;
+    label: string;
+    type?: string;
+    placeholder: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    icon: React.ElementType;
+    required?: boolean;
+}) {
+    return (
+        <div className="space-y-1">
+            <label
+                htmlFor={name}
+                className="text-sm font-semibold text-slate-700 ml-1"
+            >
+                {label}
+            </label>
+            <div className="relative">
+                <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                    id={name}
+                    name={name}
+                    type={type}
+                    required={required}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Input password con toggle visibilità.
+ */
+function PasswordInput({
+                           name,
+                           label,
+                           placeholder,
+                           value,
+                           onChange,
+                           showPassword,
+                           onToggle,
+                       }: {
+    name: string;
+    label: string;
+    placeholder: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    showPassword: boolean;
+    onToggle: () => void;
+}) {
+    return (
+        <div className="space-y-1">
+            <label
+                htmlFor={name}
+                className="text-sm font-semibold text-slate-700 ml-1"
+            >
+                {label}
+            </label>
+            <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                    id={name}
+                    name={name}
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                />
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                    aria-label={showPassword ? 'Nascondi password' : 'Mostra password'}
+                >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Checkbox termini e condizioni.
+ */
+function TermsCheckbox() {
+    return (
+        <div className="flex items-start">
+            <div className="flex items-center h-5">
+                <input
+                    id="terms"
+                    type="checkbox"
+                    required
+                    className="w-4 h-4 border border-slate-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 text-blue-600"
+                />
+            </div>
+            <label htmlFor="terms" className="ml-2 text-xs text-slate-500">
+                Accetto i{' '}
+                <Link href="/terms" className="text-blue-600 hover:underline">
+                    Termini di Servizio
+                </Link>{' '}
+                e la{' '}
+                <Link href="/privacy" className="text-blue-600 hover:underline">
+                    Privacy Policy
+                </Link>
+            </label>
         </div>
     );
 }

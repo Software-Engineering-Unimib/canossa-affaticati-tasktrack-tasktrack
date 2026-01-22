@@ -1,81 +1,134 @@
+/**
+ * @fileoverview Pagina di gestione delle categorie per bacheca.
+ *
+ * Permette di visualizzare e modificare le etichette (categorie)
+ * associate a ciascuna bacheca dell'utente.
+ *
+ * @module pages/categories
+ */
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-    Search,
-    LayoutGrid,
-    Tag,
-    Loader2
-} from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Search, LayoutGrid, Tag, Loader2 } from 'lucide-react';
 
-// Import Logica Reale
 import { useAuth } from '@/app/context/AuthContext';
 import { BoardModel, CategoryModel } from '@/models';
 import { Board } from '@/items/Board';
 import { Category } from '@/items/Category';
 
-// Import Componenti
 import CategoryCard from '@/app/components/categories/CategoryCard';
 import EditCategoryDialog from '@/app/components/categories/EditCategoryDialog';
 
+/**
+ * Prefisso per ID temporanei (client-side).
+ */
+const TEMP_ID_PREFIX = 'temp';
+
+/**
+ * Verifica se un ID è temporaneo (generato lato client).
+ */
+function isTemporaryId(id: string | number): boolean {
+    return String(id).startsWith(TEMP_ID_PREFIX);
+}
+
+/**
+ * Pagina gestione categorie.
+ */
 export default function CategoriesPage() {
     const { user } = useAuth();
 
-    // --- STATI ---
+    // ═══════════════════════════════════════════════════════════
+    // STATO
+    // ═══════════════════════════════════════════════════════════
+
     const [boards, setBoards] = useState<Board[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-
-    // --- STATO DIALOG ---
     const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
 
-    // --- FETCH DATI ---
-    const fetchData = async () => {
+    // ═══════════════════════════════════════════════════════════
+    // CARICAMENTO DATI
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Carica le bacheche dal server.
+     */
+    const fetchData = useCallback(async () => {
         if (!user) return;
+
         setIsLoading(true);
         try {
-            // Scarichiamo le bacheche (che includono già le categorie grazie al Model)
             const data = await BoardModel.getAllBoards();
             setBoards(data);
         } catch (error) {
-            console.error("Errore caricamento categorie:", error);
+            console.error('Errore caricamento categorie:', error);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         fetchData();
-    }, [user]);
+    }, [fetchData]);
 
-    // --- HANDLERS ---
+    // ════════════════════════════════════════════════════���══════
+    // FILTRAGGIO
+    // ═══════════════════════════════════════════════════════════
 
-    // 1. Apertura Dialog
-    const handleOpenDialog = (boardId: string) => {
+    /**
+     * Bacheche filtrate per query di ricerca.
+     */
+    const filteredBoards = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return boards;
+        }
+
+        const query = searchQuery.toLowerCase();
+        return boards.filter(board =>
+            board.title.toLowerCase().includes(query)
+        );
+    }, [boards, searchQuery]);
+
+    /**
+     * Bacheca attualmente selezionata per il dialog.
+     */
+    const activeBoard = useMemo(() =>
+            boards.find(b => b.id === activeBoardId),
+        [boards, activeBoardId]
+    );
+
+    // ═══════════════════════════════════════════════════════════
+    // HANDLERS DIALOG
+    // ═══════════════════════════════════════════════════════════
+
+    const openDialog = useCallback((boardId: string) => {
         setActiveBoardId(boardId);
-    };
+    }, []);
 
-    const handleCloseDialog = () => {
+    const closeDialog = useCallback(() => {
         setActiveBoardId(null);
-    };
+    }, []);
 
-    // 2. Salvataggio Categoria (Creazione o Modifica)
-    const handleSaveCategory = async (categoryData: Category) => {
+    // ═══════════════════════════════════════════════════════════
+    // HANDLERS CRUD
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Salva una categoria (crea o aggiorna).
+     */
+    const handleSaveCategory = useCallback(async (categoryData: Category) => {
         if (!activeBoardId) return;
 
         try {
-            // Se la categoria ha un ID numerico (o stringa numerica valida), è un update.
-            // Se l'ID è temporaneo (generato dal frontend) o mancante, è una create.
-            const isExisting = categoryData.id && !String(categoryData.id).startsWith('temp');
+            const isExisting = categoryData.id && !isTemporaryId(categoryData.id);
 
             if (isExisting) {
-                // UPDATE
                 await CategoryModel.updateCategory(categoryData.id, {
                     name: categoryData.name,
-                    color: categoryData.color
+                    color: categoryData.color,
                 });
             } else {
-                // CREATE
                 await CategoryModel.createCategory(
                     activeBoardId,
                     categoryData.name,
@@ -83,40 +136,33 @@ export default function CategoriesPage() {
                 );
             }
 
-            // Ricarica i dati per vedere le modifiche
             await fetchData();
-
         } catch (error) {
-            console.error("Errore salvataggio categoria:", error);
-            alert("Errore durante il salvataggio.");
+            console.error('Errore salvataggio categoria:', error);
+            alert('Errore durante il salvataggio.');
         }
-    };
+    }, [activeBoardId, fetchData]);
 
-    // 3. Eliminazione Categoria
-    const handleDeleteCategory = async (categoryId: string | number) => {
+    /**
+     * Elimina una categoria.
+     */
+    const handleDeleteCategory = useCallback(async (categoryId: string | number) => {
         if (!activeBoardId) return;
-
-        // Conferma extra per sicurezza
-        if(!confirm("Vuoi davvero eliminare questa etichetta?")) return;
+        if (!confirm('Vuoi davvero eliminare questa etichetta?')) return;
 
         try {
             await CategoryModel.deleteCategory(categoryId);
-            await fetchData(); // Ricarica i dati
+            await fetchData();
         } catch (error) {
-            console.error("Errore eliminazione categoria:", error);
-            alert("Errore durante l'eliminazione.");
+            console.error('Errore eliminazione categoria:', error);
+            alert('Errore durante l\'eliminazione.');
         }
-    };
+    }, [activeBoardId, fetchData]);
 
-    // --- FILTRAGGIO ---
-    const filteredBoards = boards.filter(board =>
-        board.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // ═══════════════════════════════════════════════════════════
+    // RENDER
+    // ═══════════════════════════════════════════════════════════
 
-    // Recupera l'oggetto della bacheca attiva per passarlo al dialog
-    const activeBoard = boards.find(b => b.id === activeBoardId);
-
-    // --- RENDER LOADING ---
     if (isLoading && boards.length === 0) {
         return (
             <div className="flex h-full w-full items-center justify-center min-h-[50vh]">
@@ -127,68 +173,117 @@ export default function CategoriesPage() {
 
     return (
         <div className="p-6 lg:p-10 max-w-7xl mx-auto pb-20 space-y-8">
+            {/* Header */}
+            <PageHeader
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+            />
 
-            {/* Header Pagina */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                        <Tag className="w-8 h-8 text-blue-600" />
-                        Gestione Categorie
-                    </h1>
-                    <p className="text-slate-500 mt-2 text-lg">
-                        Organizza le etichette e i colori per ogni tua bacheca.
-                    </p>
-                </div>
-
-                {/* Search Bar */}
-                <div className="relative w-full md:w-72 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Cerca bacheca..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
-                    />
-                </div>
-            </div>
-
-            {/* Grid delle Bacheche */}
+            {/* Content */}
             {filteredBoards.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl">
-                    <LayoutGrid className="w-12 h-12 text-slate-300 mb-3" />
-                    <p className="text-slate-500 font-medium">
-                        {searchQuery ? `Nessuna bacheca trovata per "${searchQuery}"` : "Non hai ancora bacheche attive."}
-                    </p>
-                </div>
+                <EmptyState searchQuery={searchQuery} />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {filteredBoards.map((board) => (
-                        <CategoryCard
-                            key={board.id}
-                            id={board.id}
-                            title={board.title}
-                            theme={board.theme}
-                            categories={board.categories}
-                            icon={board.icon}
-                            onEdit={() => handleOpenDialog(board.id)} // Apre il dialog unificato
-                        />
-                    ))}
-                </div>
+                <BoardsGrid
+                    boards={filteredBoards}
+                    onEditClick={openDialog}
+                />
             )}
 
-            {/* --- DIALOG UNICO PER EDIT/CREATE --- */}
-            {/* Viene renderizzato solo se c'è una board attiva */}
+            {/* Dialog */}
             {activeBoard && (
                 <EditCategoryDialog
-                    isOpen={!!activeBoard}
+                    isOpen={true}
                     boardName={activeBoard.title}
                     categories={activeBoard.categories}
-                    onClose={handleCloseDialog}
+                    onClose={closeDialog}
                     onSaveCategory={handleSaveCategory}
                     onDeleteCategory={handleDeleteCategory}
                 />
             )}
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPONENTI INTERNI
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Header della pagina.
+ */
+function PageHeader({
+                        searchQuery,
+                        onSearchChange,
+                    }: {
+    searchQuery: string;
+    onSearchChange: (value: string) => void;
+}) {
+    return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                    <Tag className="w-8 h-8 text-blue-600" />
+                    Gestione Categorie
+                </h1>
+                <p className="text-slate-500 mt-2 text-lg">
+                    Organizza le etichette e i colori per ogni tua bacheca.
+                </p>
+            </div>
+
+            <div className="relative w-full md:w-72 group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <input
+                    type="text"
+                    placeholder="Cerca bacheca..."
+                    value={searchQuery}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+                />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Stato vuoto (nessuna bacheca).
+ */
+function EmptyState({ searchQuery }: { searchQuery: string }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl">
+            <LayoutGrid className="w-12 h-12 text-slate-300 mb-3" />
+            <p className="text-slate-500 font-medium">
+                {searchQuery
+                    ? `Nessuna bacheca trovata per "${searchQuery}"`
+                    : 'Non hai ancora bacheche attive.'
+                }
+            </p>
+        </div>
+    );
+}
+
+/**
+ * Griglia delle bacheche.
+ */
+function BoardsGrid({
+                        boards,
+                        onEditClick,
+                    }: {
+    boards: Board[];
+    onEditClick: (boardId: string) => void;
+}) {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {boards.map((board) => (
+                <CategoryCard
+                    key={board.id}
+                    id={board.id}
+                    title={board.title}
+                    theme={board.theme}
+                    categories={board.categories}
+                    icon={board.icon}
+                    onEdit={() => onEditClick(board.id)}
+                />
+            ))}
         </div>
     );
 }
