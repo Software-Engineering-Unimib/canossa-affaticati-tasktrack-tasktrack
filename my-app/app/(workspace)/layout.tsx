@@ -1,46 +1,58 @@
-import type { Metadata } from "next";
-import "../globals.css";
-import Sidebar from "@/app/components/sidebar/Sidebar";
-import {FocusProvider} from "@/app/context/FocusContext";
-import FocusOverlay from "@/app/components/Focus/FocusOverlay";
+/**
+ * @fileoverview Layout per le pagine del workspace.
+ *
+ * Fornisce la struttura comune a tutte le pagine protette:
+ * - Sidebar di navigazione
+ * - Area contenuto principale
+ * - Overlay per modalità focus
+ *
+ * @module layouts/workspace
+ */
 
+import React, { type ReactNode } from 'react';
+import Sidebar from '@/app/components/sidebar/Sidebar';
+import FocusOverlay from '@/app/components/Focus/FocusOverlay';
+import { FocusProvider } from '@/app/context/FocusContext';
 
-export const metadata: Metadata = {
-  title: "Task Track",
-  description: "Personal task tracking application",
-};
+/**
+ * Props del layout.
+ */
+interface WorkspaceLayoutProps {
+    children: ReactNode;
+}
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+/**
+ * Layout wrapper per le pagine del workspace.
+ *
+ * Struttura:
+ * - Sidebar fissa a sinistra (hidden su mobile)
+ * - Area main scrollabile con overlay focus
+ * - FocusProvider per gestire stato focus locale
+ */
+export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     return (
         <FocusProvider>
             <div className="flex h-screen overflow-hidden bg-gray-50">
-
-                {/* La Sidebar rimane a sinistra (fuori dall'overlay viola) */}
+                {/* Sidebar - Desktop */}
                 <div className="flex-none hidden lg:block">
                     <Sidebar />
                 </div>
+
+                {/* Sidebar - Mobile */}
                 <div className="lg:hidden">
                     <Sidebar />
                 </div>
 
-                {/* Area Principale */}
+                {/* Area principale */}
                 <main className="flex-1 overflow-y-auto relative scroll-smooth flex flex-col pt-16 lg:pt-0">
-
-                    {/* L'overlay è posizionato 'absolute' o 'fixed' sopra il contenuto
-              ma dentro <main>, così la Sidebar resta cliccabile per spegnerlo. */}
+                    {/* Overlay focus mode */}
                     <FocusOverlay />
 
-                    {/* Il contenuto della pagina (Workspace, Board, ecc.) */}
+                    {/* Contenuto pagina */}
                     <div className="flex-1 relative z-0">
                         {children}
                     </div>
-
                 </main>
-
             </div>
         </FocusProvider>
     );

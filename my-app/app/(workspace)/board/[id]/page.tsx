@@ -1,192 +1,307 @@
+/**
+ * @fileoverview Pagina Kanban Board per la gestione dei task.
+ *
+ * Funzionalità:
+ * - Visualizzazione task in colonne (todo, inprogress, done)
+ * - Drag & drop tra colonne
+ * - Filtraggio per priorità e categoria
+ * - Creazione/modifica/eliminazione task
+ *
+ * @module pages/board/[id]
+ */
+
 'use client';
 
-import React, { useState, useMemo, useEffect, use } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, use } from 'react';
 import { Plus, Search, Filter, Check, Loader2 } from 'lucide-react';
 
-// Importazione Tipi e Dati
-import { Task, ColumnId, ColumnData } from '@/items/Task';
+import { Task, ColumnId, ColumnData, DEFAULT_COLUMNS } from '@/items/Task';
 import { PriorityLevel } from '@/items/Priority';
-import { BoardModel, TaskModel } from '@/models'; // Importa modelli reali
-import { Board } from '@/items/Board'; // Importa tipo Board
+import { BoardModel, TaskModel } from '@/models';
+import { Board } from '@/items/Board';
 
-// Importazione Componenti Custom
 import TaskCard from '@/app/components/KanbanBoard/TaskCard';
 import TaskDialog from '@/app/components/KanbanBoard/TaskDialog';
-import { useAuth } from '@/app/context/AuthContext'; // Auth hook
+import { useAuth } from '@/app/context/AuthContext';
 
-// Configurazione Colonne Kanban
-const columnsConfig: ColumnData[] = [
+/**
+ * Configurazione delle colonne Kanban.
+ */
+const COLUMNS_CONFIG: readonly ColumnData[] = [
     { id: 'todo', title: 'Da Fare', color: 'bg-blue-500/50' },
-    { id: 'inprogress', title: 'In Corso', color: 'bg-green-500/50 ' },
-    { id: 'done', title: 'Completato', color: 'bg-orange-500/50 ' },
+    { id: 'inprogress', title: 'In Corso', color: 'bg-green-500/50' },
+    { id: 'done', title: 'Completato', color: 'bg-orange-500/50' },
 ];
 
-const allPriorities: PriorityLevel[] = ['Bassa', 'Media', 'Alta', 'Urgente'];
+/**
+ * Livelli di priorità disponibili per il filtro.
+ */
+const PRIORITY_LEVELS: readonly PriorityLevel[] = ['Bassa', 'Media', 'Alta', 'Urgente'];
 
-// Mappa per l'ordinamento: 0 è la priorità massima
-const priorityOrder: Record<string, number> = {
-    'Urgente': 0,
-    'Alta': 1,
-    'Media': 2,
-    'Bassa': 3
+/**
+ * Mappa per l'ordinamento delle priorità (0 = massima).
+ */
+const PRIORITY_ORDER: Record<PriorityLevel, number> = {
+    Urgente: 0,
+    Alta: 1,
+    Media: 2,
+    Bassa: 3,
 };
 
-export default function BoardPage({ params }: { params: Promise<{ id: string }> }) {
+/**
+ * Stato del dialog task.
+ */
+interface TaskDialogState {
+    isOpen: boolean;
+    mode: 'create' | 'edit';
+    task: Task | null;
+    columnId: ColumnId;
+}
 
-    // 1. Spacchettamento ID (Next.js 15)
+/**
+ * Stato iniziale del dialog.
+ */
+const INITIAL_DIALOG_STATE: TaskDialogState = {
+    isOpen: false,
+    mode: 'create',
+    task: null,
+    columnId: 'todo',
+};
+
+/**
+ * Props della pagina.
+ */
+interface BoardPageProps {
+    params: Promise<{ id: string }>;
+}
+
+/**
+ * Pagina Kanban Board.
+ */
+export default function BoardPage({ params }: BoardPageProps) {
+    // Unwrap params (Next.js 15)
     const { id: boardId } = use(params);
     const { user } = useAuth();
 
-    // --- STATI DATI ---
+    // ═══════════════════════════════════════════════════════════
+    // STATO DATI
+    // ═══════════════════════════════════════════════════════════
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [board, setBoard] = useState<Board | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // --- STATI UI & INTERAZIONE ---
+    // ═══════════════════════════════════════════════════════════
+    // STATO UI
+    // ════════════════��══════════════════════════════════════════
+
     const [searchQuery, setSearchQuery] = useState('');
     const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-    // --- STATI FILTRI ---
+    // ═══════════════════════════════════════════════════════════
+    // STATO FILTRI
+    // ═══════════════════════════════════════════════════════════
+
     const [selectedPriorities, setSelectedPriorities] = useState<PriorityLevel[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-    // --- STATI DIALOG UNIFICATO ---
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
-    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const [createColumnId, setCreateColumnId] = useState<ColumnId>('todo');
+    // ═══════════════════════════════════════════════════════════
+    // STATO DIALOG
+    // ═══════════════════════════════════════════════════════════
 
-    // --- CARICAMENTO DATI REALI ---
-    const loadData = async () => {
+    const [dialogState, setDialogState] = useState<TaskDialogState>(INITIAL_DIALOG_STATE);
+
+    // ═══════════════════════════════════════════════════════════
+    // CARICAMENTO DATI
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Carica board e task dal server.
+     */
+    const loadData = useCallback(async () => {
         if (!user || !boardId) return;
-        // Se stiamo aggiornando dopo un'azione (es. save), non mostrare full loader se abbiamo già dati
-        // ma qui per semplicità usiamo isLoading solo al primo mount
+
         try {
             const boardData = await BoardModel.getBoardById(boardId);
             setBoard(boardData);
+
             if (boardData) {
                 const tasksData = await TaskModel.getTasksByBoardId(boardId);
                 setTasks(tasksData);
-                console.log("Tasks caricati:", tasksData);
             }
         } catch (error) {
-            console.error("Errore caricamento board:", error);
+            console.error('Errore caricamento board:', error);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [boardId, user]);
 
     useEffect(() => {
         loadData();
-    }, [boardId, user]);
+    }, [loadData]);
 
-    // --- LOGICA FILTRAGGIO ---
+    // ═══════════════════════════════════════════════════════════
+    // FILTRAGGIO E ORDINAMENTO
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Task filtrati per ricerca, priorità e categoria.
+     */
     const filteredTasks = useMemo(() => {
-        return tasks.filter(t => {
-            // 1. Filtro Testuale
-            const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                t.categories.some(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        return tasks.filter(task => {
+            // Filtro testuale
+            const matchesSearch =
+                task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                task.categories.some(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-            // 2. Filtro Priorità
-            const matchesPriority = selectedPriorities.length === 0 || selectedPriorities.includes(t.priority);
+            // Filtro priorità
+            const matchesPriority =
+                selectedPriorities.length === 0 ||
+                selectedPriorities.includes(task.priority);
 
-            // 3. Filtro Categoria
-            const matchesCategory = selectedCategories.length === 0 ||
-                t.categories.some(c => selectedCategories.includes(c.id.toString()));
+            // Filtro categoria
+            const matchesCategory =
+                selectedCategories.length === 0 ||
+                task.categories.some(c => selectedCategories.includes(c.id.toString()));
 
             return matchesSearch && matchesPriority && matchesCategory;
         });
     }, [tasks, searchQuery, selectedPriorities, selectedCategories]);
 
-    // --- HANDLERS FILTRI ---
-    const togglePriority = (priority: PriorityLevel) => {
+    /**
+     * Ordina i task per priorità (desc) e data (asc).
+     */
+    const sortTasks = useCallback((tasksToSort: Task[]): Task[] => {
+        return [...tasksToSort].sort((a, b) => {
+            const priorityA = PRIORITY_ORDER[a.priority] ?? 99;
+            const priorityB = PRIORITY_ORDER[b.priority] ?? 99;
+
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+
+            const dateA = new Date(a.dueDate).getTime();
+            const dateB = new Date(b.dueDate).getTime();
+            return dateA - dateB;
+        });
+    }, []);
+
+    /**
+     * Ottiene i task filtrati e ordinati per una colonna.
+     */
+    const getColumnTasks = useCallback((columnId: ColumnId): Task[] => {
+        const columnTasks = filteredTasks.filter(t => t.columnId === columnId);
+        return sortTasks(columnTasks);
+    }, [filteredTasks, sortTasks]);
+
+    // ═══════════════════════════════════════════════════════════
+    // HANDLERS FILTRI
+    // ═══════════════════════════════════════════════════════════
+
+    const togglePriority = useCallback((priority: PriorityLevel) => {
         setSelectedPriorities(prev =>
-            prev.includes(priority) ? prev.filter(p => p !== priority) : [...prev, priority]
+            prev.includes(priority)
+                ? prev.filter(p => p !== priority)
+                : [...prev, priority]
         );
-    };
+    }, []);
 
-    const toggleCategory = (catId: string) => {
+    const toggleCategory = useCallback((categoryId: string) => {
         setSelectedCategories(prev =>
-            prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId]
+            prev.includes(categoryId)
+                ? prev.filter(c => c !== categoryId)
+                : [...prev, categoryId]
         );
-    };
+    }, []);
 
-    const clearFilters = () => {
+    const clearFilters = useCallback(() => {
         setSelectedPriorities([]);
         setSelectedCategories([]);
         setSearchQuery('');
         setIsFilterOpen(false);
-    };
+    }, []);
 
-    // --- HANDLERS DRAG & DROP ---
-    const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    const activeFiltersCount = selectedPriorities.length + selectedCategories.length;
+
+    // ═══════════════════════════════════════════════════════════
+    // HANDLERS DRAG & DROP
+    // ═══════════════════════════════════════════════════════════
+
+    const handleDragStart = useCallback((e: React.DragEvent, taskId: string) => {
         setDraggedTaskId(taskId);
         e.dataTransfer.effectAllowed = 'move';
-    };
+    }, []);
 
-    const handleDragOver = (e: React.DragEvent) => {
+    const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
-    };
+    }, []);
 
-    const handleDrop = async (e: React.DragEvent, targetColumn: ColumnId) => {
+    const handleDrop = useCallback(async (e: React.DragEvent, targetColumn: ColumnId) => {
         e.preventDefault();
+
         if (!draggedTaskId) return;
 
-        // Aggiornamento ottimistico
-        setTasks(prev => prev.map(task => {
-            if (task.id === draggedTaskId) {
-                return { ...task, columnId: targetColumn };
-            }
-            return task;
-        }));
+        // Update ottimistico
+        setTasks(prev => prev.map(task =>
+            task.id === draggedTaskId
+                ? { ...task, columnId: targetColumn }
+                : task
+        ));
 
-        // Aggiornamento Backend
+        // Update backend
         try {
             await TaskModel.updateTaskColumn(draggedTaskId, targetColumn);
         } catch (error) {
-            console.error("Errore spostamento task:", error);
-            // Revert ottimistico (opzionale, richiederebbe ricaricamento dati)
-            loadData();
+            console.error('Errore spostamento task:', error);
+            loadData(); // Revert
         }
 
         setDraggedTaskId(null);
-    };
+    }, [draggedTaskId, loadData]);
 
-    // --- HANDLERS GESTIONE TASK ---
+    // ═══════════════════════════════════════════════════════════
+    // HANDLERS DIALOG
+    // ═══════════════════════════════════════════════════════════
 
-    // Apertura Modifica
-    const openEditDialog = (task: Task) => {
-        setDialogMode('edit');
-        setSelectedTask(task);
-        setIsDialogOpen(true);
-    };
+    const openCreateDialog = useCallback((columnId: ColumnId = 'todo') => {
+        setDialogState({
+            isOpen: true,
+            mode: 'create',
+            task: null,
+            columnId,
+        });
+    }, []);
 
-    // Apertura Creazione
-    const openCreateDialog = (columnId: ColumnId = 'todo') => {
-        setDialogMode('create');
-        setSelectedTask(null);
-        setCreateColumnId(columnId); // Impostiamo la colonna di default per il nuovo task
-        setIsDialogOpen(true);
-    };
+    const openEditDialog = useCallback((task: Task) => {
+        setDialogState({
+            isOpen: true,
+            mode: 'edit',
+            task,
+            columnId: task.columnId,
+        });
+    }, []);
 
-    // Callback salvataggio
-    const handleSaveUnified = (taskToSave: Task) => {
-        // Aggiorniamo la UI locale immediatamente o ricarichiamo dal server
-        // Per consistenza con ID generati dal DB, è meglio ricaricare
+    const closeDialog = useCallback(() => {
+        setDialogState(INITIAL_DIALOG_STATE);
+    }, []);
+
+    const handleSaveTask = useCallback(() => {
         loadData();
-    };
+    }, [loadData]);
 
-    // Eliminazione
-    const handleDeleteTask = async (taskId: string) => {
+    const handleDeleteTask = useCallback(async (taskId: string) => {
         try {
             await TaskModel.deleteTask(taskId);
             setTasks(prev => prev.filter(t => t.id !== taskId));
-        } catch (e) { console.error(e); }
-    };
+        } catch (error) {
+            console.error('Errore eliminazione task:', error);
+        }
+    }, []);
 
-    // Conta filtri attivi per badge UI
-    const activeFiltersCount = selectedPriorities.length + selectedCategories.length;
+    // ═══════════════════════════════════════════════════════════
+    // RENDER
+    // ═══════════════════════════════════════════════════════════
 
     if (isLoading) {
         return (
@@ -196,224 +311,350 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
         );
     }
 
-    if (!board) return <div className="p-10 text-center">Bacheca non trovata.</div>;
+    if (!board) {
+        return (
+            <div className="p-10 text-center text-slate-500">
+                Bacheca non trovata.
+            </div>
+        );
+    }
 
     return (
         <div
             className="h-full flex flex-col p-6 lg:p-8 bg-slate-50 overflow-hidden"
             onClick={() => setIsFilterOpen(false)}
         >
-
-            {/* HEADER BOARD */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 flex-none relative z-20">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{board.title}</h1>
-                        <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs font-semibold">
-                            Privata
-                        </span>
-                    </div>
-                    <p className="text-slate-500 mt-1 text-sm">Gestisci le attività trascinandole tra le colonne.</p>
-                </div>
-
-                <div className="flex items-center gap-3 relative">
-                    {/* Barra Ricerca */}
-                    <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Cerca task..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                        />
-                    </div>
-
-                    {/* Tasto Filtro & Dropdown */}
-                    <div className="relative">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsFilterOpen(!isFilterOpen);
-                            }}
-                            className={`p-2 border rounded-xl transition-colors relative flex items-center justify-center
-                                ${activeFiltersCount > 0 || isFilterOpen ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}
-                            `}
-                        >
-                            <Filter className="w-5 h-5" />
-                            {activeFiltersCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white font-bold">
-                                    {activeFiltersCount}
-                                </span>
-                            )}
-                        </button>
-
-                        {isFilterOpen && (
-                            <div
-                                className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
-                                    <h3 className="font-bold text-sm text-slate-800">Filtra per</h3>
-                                    {(activeFiltersCount > 0 || searchQuery) && (
-                                        <button
-                                            onClick={clearFilters}
-                                            className="text-xs text-red-500 hover:text-red-700 font-medium"
-                                        >
-                                            Resetta tutto
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Sezione Priorità */}
-                                <div className="mb-4">
-                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Priorità</label>
-                                    <div className="space-y-2">
-                                        {allPriorities.map((p) => (
-                                            <label key={p} className="flex items-center gap-2 cursor-pointer group">
-                                                <div className={`
-                                                    w-4 h-4 rounded border flex items-center justify-center transition-colors
-                                                    ${selectedPriorities.includes(p) ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white group-hover:border-blue-400'}
-                                                `}>
-                                                    {selectedPriorities.includes(p) && <Check className="w-3 h-3 text-white" />}
-                                                </div>
-                                                <input
-                                                    type="checkbox"
-                                                    className="hidden"
-                                                    checked={selectedPriorities.includes(p)}
-                                                    onChange={() => togglePriority(p)}
-                                                />
-                                                <span className="text-sm text-slate-700">{p}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Sezione Categorie */}
-                                {board && board.categories.length > 0 && (
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Categorie</label>
-                                        <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                                            {board.categories.map((cat) => (
-                                                <label key={cat.id} className="flex items-center gap-2 cursor-pointer group">
-                                                    <div className={`
-                                                        w-4 h-4 rounded border flex items-center justify-center transition-colors
-                                                        ${selectedCategories.includes(cat.id.toString()) ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white group-hover:border-blue-400'}
-                                                    `}>
-                                                        {selectedCategories.includes(cat.id.toString()) && <Check className="w-3 h-3 text-white" />}
-                                                    </div>
-                                                    <input
-                                                        type="checkbox"
-                                                        className="hidden"
-                                                        checked={selectedCategories.includes(cat.id.toString())}
-                                                        onChange={() => toggleCategory(cat.id.toString())}
-                                                    />
-                                                    <span className="text-sm text-slate-700 truncate">{cat.name}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Bottone Nuovo Task */}
-                    <button
-                        onClick={() => openCreateDialog('todo')}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span className="hidden sm:inline">Nuovo Task</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* AREA KANBAN */}
-            <div className="flex-1 overflow-x-auto overflow-y-hidden">
-                <div className="flex h-full gap-4 min-w-[900px] w-full">
-                    {columnsConfig.map((col) => {
-                        // 1. Filtra per colonna
-                        const colTasks = filteredTasks.filter(t => t.columnId === col.id);
-
-                        // 2. Ordina: Priorità (Desc) -> Data Scadenza (Asc)
-                        const sortedColTasks = colTasks.sort((a, b) => {
-                            const valA = priorityOrder[a.priority] ?? 99;
-                            const valB = priorityOrder[b.priority] ?? 99;
-
-                            if (valA !== valB) {
-                                return valA - valB;
-                            }
-
-                            const dateA = a.dueDate instanceof Date ? a.dueDate.getTime() : new Date(a.dueDate).getTime();
-                            const dateB = b.dueDate instanceof Date ? b.dueDate.getTime() : new Date(b.dueDate).getTime();
-
-                            return dateA - dateB;
-                        });
-
-                        return (
-                            <div
-                                key={col.id}
-                                className="flex-1 flex flex-col min-w-[280px] h-full"
-                                onDragOver={handleDragOver}
-                                onDrop={(e) => handleDrop(e, col.id)}
-                            >
-                                {/* Header Colonna */}
-                                <div className="flex items-center justify-between mb-4 px-1">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-slate-700 text-sm uppercase tracking-wide">{col.title}</h3>
-                                        <span className="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                                            {sortedColTasks.length}
-                                        </span>
-                                    </div>
-                                    <div className={`h-1.5 w-1.5 rounded-full ${col.color}`}></div>
-                                </div>
-
-                                {/* Lista Task Droppable */}
-                                <div className={`flex-1 ${col.color} rounded-2xl border border-slate-200/60 p-3 overflow-y-auto space-y-3 custom-scrollbar`}>
-                                    {sortedColTasks.length === 0 ? (
-                                        <div className="h-24 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-xs italic">
-                                            {filteredTasks.length === 0 && tasks.length > 0 ? "Nessun risultato dai filtri" : "Nessun task qui"}
-                                        </div>
-                                    ) : (
-                                        sortedColTasks.map(task => (
-                                            <TaskCard
-                                                key={task.id}
-                                                task={task}
-                                                isDragging={draggedTaskId === task.id}
-                                                onDragStart={handleDragStart}
-                                                onClick={openEditDialog}
-                                            />
-                                        ))
-                                    )}
-
-                                    {/* Tasto rapido aggiungi in colonna */}
-                                    <button
-                                        onClick={() => openCreateDialog(col.id)}
-                                        className="w-full py-2 mt-2 border border-dashed border-slate-300 text-slate-400 rounded-xl hover:bg-white hover:text-blue-600 hover:border-blue-300 transition-all text-xs font-medium flex items-center justify-center gap-1"
-                                    >
-                                        <Plus className="w-3 h-3" /> Aggiungi
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* MODALE UNIFICATO (CREATE / EDIT) */}
-            <TaskDialog
-                isOpen={isDialogOpen}
-                mode={dialogMode}
-                task={selectedTask}
-                boardCategories={board ? board.categories : []}
-                boardId={boardId} // Passiamo l'ID della board
-                columnId={createColumnId} // Passiamo la colonna target
-                onClose={() => setIsDialogOpen(false)}
-                onSave={handleSaveUnified}
-                onDelete={handleDeleteTask}
+            {/* Header */}
+            <BoardHeader
+                title={board.title}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                activeFiltersCount={activeFiltersCount}
+                isFilterOpen={isFilterOpen}
+                onFilterToggle={() => setIsFilterOpen(prev => !prev)}
+                onCreateClick={() => openCreateDialog('todo')}
             />
 
+            {/* Filter Dropdown */}
+            {isFilterOpen && (
+                <FilterDropdown
+                    priorities={PRIORITY_LEVELS}
+                    selectedPriorities={selectedPriorities}
+                    categories={board.categories}
+                    selectedCategories={selectedCategories}
+                    hasFilters={activeFiltersCount > 0 || !!searchQuery}
+                    onTogglePriority={togglePriority}
+                    onToggleCategory={toggleCategory}
+                    onClear={clearFilters}
+                />
+            )}
+
+            {/* Kanban Columns */}
+            <div className="flex-1 overflow-x-auto overflow-y-hidden mt-6">
+                <div className="flex h-full gap-4 min-w-[900px] w-full">
+                    {COLUMNS_CONFIG.map(column => (
+                        <KanbanColumn
+                            key={column.id}
+                            column={column}
+                            tasks={getColumnTasks(column.id)}
+                            draggedTaskId={draggedTaskId}
+                            hasFilters={filteredTasks.length === 0 && tasks.length > 0}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            onDragStart={handleDragStart}
+                            onTaskClick={openEditDialog}
+                            onAddClick={openCreateDialog}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Task Dialog */}
+            <TaskDialog
+                isOpen={dialogState.isOpen}
+                mode={dialogState.mode}
+                task={dialogState.task}
+                boardCategories={board.categories}
+                boardId={boardId}
+                columnId={dialogState.columnId}
+                onClose={closeDialog}
+                onSave={handleSaveTask}
+                onDelete={handleDeleteTask}
+            />
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPONENTI INTERNI
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Header della board con ricerca e azioni.
+ */
+function BoardHeader({
+                         title,
+                         searchQuery,
+                         onSearchChange,
+                         activeFiltersCount,
+                         isFilterOpen,
+                         onFilterToggle,
+                         onCreateClick,
+                     }: {
+    title: string;
+    searchQuery: string;
+    onSearchChange: (value: string) => void;
+    activeFiltersCount: number;
+    isFilterOpen: boolean;
+    onFilterToggle: () => void;
+    onCreateClick: () => void;
+}) {
+    return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-none relative z-20">
+            <div>
+                <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                        {title}
+                    </h1>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs font-semibold">
+                        Privata
+                    </span>
+                </div>
+                <p className="text-slate-500 mt-1 text-sm">
+                    Gestisci le attività trascinandole tra le colonne.
+                </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+                {/* Search */}
+                <div className="relative group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <input
+                        type="text"
+                        placeholder="Cerca task..."
+                        value={searchQuery}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    />
+                </div>
+
+                {/* Filter Button */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onFilterToggle();
+                    }}
+                    className={`
+                        p-2 border rounded-xl transition-colors relative flex items-center justify-center
+                        ${activeFiltersCount > 0 || isFilterOpen
+                        ? 'bg-blue-50 border-blue-200 text-blue-600'
+                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
+                    }
+                    `}
+                    aria-label="Filtri"
+                >
+                    <Filter className="w-5 h-5" />
+                    {activeFiltersCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] text-white font-bold">
+                            {activeFiltersCount}
+                        </span>
+                    )}
+                </button>
+
+                {/* Create Button */}
+                <button
+                    onClick={onCreateClick}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20"
+                >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Nuovo Task</span>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Dropdown filtri.
+ */
+function FilterDropdown({
+                            priorities,
+                            selectedPriorities,
+                            categories,
+                            selectedCategories,
+                            hasFilters,
+                            onTogglePriority,
+                            onToggleCategory,
+                            onClear,
+                        }: {
+    priorities: readonly PriorityLevel[];
+    selectedPriorities: PriorityLevel[];
+    categories: { id: string; name: string }[];
+    selectedCategories: string[];
+    hasFilters: boolean;
+    onTogglePriority: (priority: PriorityLevel) => void;
+    onToggleCategory: (categoryId: string) => void;
+    onClear: () => void;
+}) {
+    return (
+        <div
+            className="absolute right-6 top-24 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
+                <h3 className="font-bold text-sm text-slate-800">Filtra per</h3>
+                {hasFilters && (
+                    <button
+                        onClick={onClear}
+                        className="text-xs text-red-500 hover:text-red-700 font-medium"
+                    >
+                        Resetta tutto
+                    </button>
+                )}
+            </div>
+
+            {/* Priorità */}
+            <div className="mb-4">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                    Priorità
+                </label>
+                <div className="space-y-2">
+                    {priorities.map((priority) => (
+                        <FilterCheckbox
+                            key={priority}
+                            label={priority}
+                            checked={selectedPriorities.includes(priority)}
+                            onChange={() => onTogglePriority(priority)}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Categorie */}
+            {categories.length > 0 && (
+                <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                        Categorie
+                    </label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                        {categories.map((cat) => (
+                            <FilterCheckbox
+                                key={cat.id}
+                                label={cat.name}
+                                checked={selectedCategories.includes(cat.id.toString())}
+                                onChange={() => onToggleCategory(cat.id.toString())}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
+ * Checkbox per i filtri.
+ */
+function FilterCheckbox({
+                            label,
+                            checked,
+                            onChange,
+                        }: {
+    label: string;
+    checked: boolean;
+    onChange: () => void;
+}) {
+    return (
+        <label className="flex items-center gap-2 cursor-pointer group">
+            <div className={`
+                w-4 h-4 rounded border flex items-center justify-center transition-colors
+                ${checked
+                ? 'bg-blue-600 border-blue-600'
+                : 'border-slate-300 bg-white group-hover:border-blue-400'
+            }
+            `}>
+                {checked && <Check className="w-3 h-3 text-white" />}
+            </div>
+            <input
+                type="checkbox"
+                className="hidden"
+                checked={checked}
+                onChange={onChange}
+            />
+            <span className="text-sm text-slate-700 truncate">{label}</span>
+        </label>
+    );
+}
+
+/**
+ * Colonna Kanban.
+ */
+function KanbanColumn({
+                          column,
+                          tasks,
+                          draggedTaskId,
+                          hasFilters,
+                          onDragOver,
+                          onDrop,
+                          onDragStart,
+                          onTaskClick,
+                          onAddClick,
+                      }: {
+    column: ColumnData;
+    tasks: Task[];
+    draggedTaskId: string | null;
+    hasFilters: boolean;
+    onDragOver: (e: React.DragEvent) => void;
+    onDrop: (e: React.DragEvent, columnId: ColumnId) => void;
+    onDragStart: (e: React.DragEvent, taskId: string) => void;
+    onTaskClick: (task: Task) => void;
+    onAddClick: (columnId: ColumnId) => void;
+}) {
+    return (
+        <div
+            className="flex-1 flex flex-col min-w-[280px] h-full"
+            onDragOver={onDragOver}
+            onDrop={(e) => onDrop(e, column.id)}
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4 px-1">
+                <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-700 text-sm uppercase tracking-wide">
+                        {column.title}
+                    </h3>
+                    <span className="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                        {tasks.length}
+                    </span>
+                </div>
+                <div className={`h-1.5 w-1.5 rounded-full ${column.color}`} />
+            </div>
+
+            {/* Task List */}
+            <div className={`flex-1 ${column.color} rounded-2xl border border-slate-200/60 p-3 overflow-y-auto space-y-3 custom-scrollbar`}>
+                {tasks.length === 0 ? (
+                    <div className="h-24 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-xs italic">
+                        {hasFilters ? 'Nessun risultato dai filtri' : 'Nessun task qui'}
+                    </div>
+                ) : (
+                    tasks.map(task => (
+                        <TaskCard
+                            key={task.id}
+                            task={task}
+                            isDragging={draggedTaskId === task.id}
+                            onDragStart={onDragStart}
+                            onClick={onTaskClick}
+                        />
+                    ))
+                )}
+
+                {/* Add Button */}
+                <button
+                    onClick={() => onAddClick(column.id)}
+                    className="w-full py-2 mt-2 border border-dashed border-slate-300 text-slate-400 rounded-xl hover:bg-white hover:text-blue-600 hover:border-blue-300 transition-colors text-xs font-medium flex items-center justify-center gap-1"
+                >
+                    <Plus className="w-3 h-3" /> Aggiungi
+                </button>
+            </div>
         </div>
     );
 }

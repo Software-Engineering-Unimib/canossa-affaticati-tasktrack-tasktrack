@@ -1,10 +1,35 @@
+/**
+ * @fileoverview Dialog per la modifica di una bacheca esistente.
+ *
+ * Permette di modificare:
+ * - Nome e descrizione
+ * - Icona/categoria
+ * - Tema colore
+ * - Collaboratori (ospiti)
+ *
+ * Include anche la funzionalità di eliminazione con conferma.
+ *
+ * @module components/Board/EditBoardDialog
+ */
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Trash2, Check, Loader2, Save, LayoutGrid, ChevronDown } from 'lucide-react';
-import { Board, BoardTheme, themeBoardOptions } from "@/items/Board";
-import { Icon, iconBoardOptions } from '@/items/BoardIcon';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Trash2, Loader2, Save } from 'lucide-react';
 
+import { Board, BoardTheme } from '@/items/Board';
+import { Icon } from '@/items/BoardIcon';
+
+// Importa componenti condivisi da CreateBoardDialog
+import {
+    BoardInfoSection,
+    ThemeSelector,
+    GuestsSection,
+} from './CreateBoardDialog';
+
+/**
+ * Props del componente.
+ */
 interface EditBoardDialogProps {
     isOpen: boolean;
     initialData: Board | null;
@@ -13,299 +38,355 @@ interface EditBoardDialogProps {
     onDelete: (id: string | number) => void;
 }
 
+/**
+ * Stato del form.
+ */
+interface FormState {
+    title: string;
+    description: string;
+    icon: Icon;
+    theme: BoardTheme;
+    guestEmail: string;
+    guests: string[];
+}
+
+/**
+ * Stato iniziale del form (vuoto).
+ */
+const EMPTY_FORM_STATE: FormState = {
+    title: '',
+    description: '',
+    icon: 'personal',
+    theme: 'blue',
+    guestEmail: '',
+    guests: [],
+};
+
+/**
+ * Valida un indirizzo email.
+ */
+function isValidEmail(email: string): boolean {
+    return email.includes('@') && email.length > 3;
+}
+
+/**
+ * Crea lo stato del form dai dati della bacheca.
+ */
+function createFormStateFromBoard(board: Board): FormState {
+    return {
+        title: board.title,
+        description: board.description ?? '',
+        icon: board.icon,
+        theme: board.theme,
+        guestEmail: '',
+        guests: board.guests ?? [],
+    };
+}
+
+/**
+ * Dialog per la modifica di una bacheca.
+ */
 export default function EditBoardDialog({
                                             isOpen,
                                             initialData,
                                             onClose,
                                             onUpdate,
-                                            onDelete
-                                        }: EditBoardDialogProps) {
+                                            onDelete,
+                                        }: EditBoardDialogProps): React.ReactElement | null {
+    // ═══════════════════════════════════════════════════════════
+    // TUTTI GLI HOOKS DEVONO ESSERE CHIAMATI PRIMA DI QUALSIASI RETURN
+    // ═══════════════════════════════════════════════════════════
 
-    // Stati del Form
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [selectedIcon, setSelectedIcon] = useState<Icon>('personal'); // Nuovo Stato
-    const [selectedTheme, setSelectedTheme] = useState<BoardTheme>('blue');
-    const [guests, setGuests] = useState<string[]>([]);
-    const [guestEmail, setGuestEmail] = useState('');
+    const [formState, setFormState] = useState<FormState>(EMPTY_FORM_STATE);
     const [isLoading, setIsLoading] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    // --- EFFETTO DI SINCRONIZZAZIONE ---
+    // Sincronizza il form quando i dati iniziali cambiano
     useEffect(() => {
         if (isOpen && initialData) {
-            setTitle(initialData.title);
-            setDescription(initialData.description || '');
-            setSelectedIcon(initialData.icon); // Sincronizza icona
-            setSelectedTheme(initialData.theme);
-            setGuests(initialData.guests || []);
+            setFormState(createFormStateFromBoard(initialData));
             setShowDeleteConfirm(false);
         }
     }, [isOpen, initialData]);
 
-    if (!isOpen || !initialData) return null;
+    /**
+     * Aggiorna un campo del form.
+     */
+    const updateField = useCallback(<K extends keyof FormState>(field: K, value: FormState[K]) => {
+        setFormState(prev => ({ ...prev, [field]: value }));
+    }, []);
 
-    // --- HANDLERS ---
+    /**
+     * Aggiunge un ospite alla lista.
+     */
+    const handleAddGuest = useCallback(() => {
+        setFormState(prev => {
+            const { guestEmail, guests } = prev;
+            if (isValidEmail(guestEmail) && !guests.includes(guestEmail)) {
+                return {
+                    ...prev,
+                    guests: [...guests, guestEmail],
+                    guestEmail: '',
+                };
+            }
+            return prev;
+        });
+    }, []);
 
-    const handleAddGuest = () => {
-        if (guestEmail && guestEmail.includes('@') && !guests.includes(guestEmail)) {
-            setGuests([...guests, guestEmail]);
-            setGuestEmail('');
-        }
-    };
+    /**
+     * Rimuove un ospite dalla lista.
+     */
+    const handleRemoveGuest = useCallback((emailToRemove: string) => {
+        setFormState(prev => ({
+            ...prev,
+            guests: prev.guests.filter(email => email !== emailToRemove),
+        }));
+    }, []);
 
-    const handleRemoveGuest = (emailToRemove: string) => {
-        setGuests(guests.filter(email => email !== emailToRemove));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    /**
+     * Gestisce l'invio del form.
+     */
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!formState.title.trim() || !initialData) return;
+
         setIsLoading(true);
 
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            onUpdate({
+                ...initialData,
+                title: formState.title,
+                description: formState.description,
+                icon: formState.icon,
+                theme: formState.theme,
+                guests: formState.guests,
+            });
 
-        onUpdate({
-            ...initialData,
-            title,
-            description,
-            icon: selectedIcon, // Invia l'icona aggiornata
-            theme: selectedTheme,
-            guests
-        });
+            onClose();
+        } finally {
+            setIsLoading(false);
+        }
+    }, [formState, initialData, onUpdate, onClose]);
 
-        setIsLoading(false);
-        onClose();
-    };
-
-    const handleDelete = () => {
+    /**
+     * Gestisce l'eliminazione con conferma.
+     */
+    const handleDelete = useCallback(() => {
         if (!showDeleteConfirm) {
             setShowDeleteConfirm(true);
             return;
         }
-        onDelete(initialData.id);
-        onClose();
-    };
+
+        if (initialData) {
+            onDelete(initialData.id);
+            onClose();
+        }
+    }, [showDeleteConfirm, initialData, onDelete, onClose]);
+
+    /**
+     * Annulla la conferma di eliminazione.
+     */
+    const cancelDelete = useCallback(() => {
+        setShowDeleteConfirm(false);
+    }, []);
+
+    /**
+     * Gestisce il tasto Enter nell'input email.
+     */
+    const handleGuestInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddGuest();
+        }
+    }, [handleAddGuest]);
+
+    // ═══════════════════════════════════════════════════════════
+    // EARLY RETURN DOPO TUTTI GLI HOOKS
+    // ═══════════════════════════════════════════════════════════
+
+    if (!isOpen || !initialData) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-board-title"
+        >
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white sticky top-0 z-10">
-                    <h2 className="text-lg font-bold text-slate-800">Modifica Bacheca</h2>
+                    <h2 id="edit-board-title" className="text-lg font-bold text-slate-800">
+                        Modifica Bacheca
+                    </h2>
                     <button
                         onClick={onClose}
                         className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                        aria-label="Chiudi"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {/* Body Scrollable */}
+                {/* Body */}
                 <div className="overflow-y-auto p-6 space-y-6">
                     <form id="edit-board-form" onSubmit={handleSubmit} className="space-y-6">
+                        {/* Sezione informazioni base */}
+                        <BoardInfoSection
+                            title={formState.title}
+                            description={formState.description}
+                            icon={formState.icon}
+                            onTitleChange={(value) => updateField('title', value)}
+                            onDescriptionChange={(value) => updateField('description', value)}
+                            onIconChange={(value) => updateField('icon', value)}
+                        />
 
-                        {/* 1. Titolo, Descrizione e Categoria */}
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="edit-title" className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Nome Bacheca
-                                </label>
-                                <input
-                                    id="edit-title"
-                                    type="text"
-                                    required
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium text-slate-900"
-                                />
-                            </div>
+                        {/* Sezione tema colore */}
+                        <ThemeSelector
+                            selectedTheme={formState.theme}
+                            onThemeChange={(value) => updateField('theme', value)}
+                            label="Tema Colore"
+                        />
 
-                            <div>
-                                <label htmlFor="edit-desc" className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Descrizione
-                                </label>
-                                <textarea
-                                    id="edit-desc"
-                                    rows={3}
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm resize-none text-slate-700"
-                                />
-                            </div>
+                        {/* Sezione collaboratori */}
+                        <GuestsSection
+                            guestEmail={formState.guestEmail}
+                            guests={formState.guests}
+                            onEmailChange={(value) => updateField('guestEmail', value)}
+                            onAddGuest={handleAddGuest}
+                            onRemoveGuest={handleRemoveGuest}
+                            onKeyDown={handleGuestInputKeyDown}
+                            label="Gestisci Collaboratori"
+                        />
 
-                            <div>
-                                <label htmlFor="edit-icon" className="block text-sm font-semibold text-slate-700 mb-1">
-                                    Icona
-                                </label>
-                                <div className="relative">
-                                    {/* Icona sinistra */}
-                                    <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-
-                                    <select
-                                        id="edit-icon"
-                                        value={selectedIcon}
-                                        onChange={(e) => setSelectedIcon(e.target.value as Icon)}
-                                        className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm bg-white appearance-none text-slate-700 font-medium cursor-pointer hover:bg-slate-50"
-                                    >
-                                        {iconBoardOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
-
-                                    {/* Icona chevron destra per indicare il dropdown */}
-                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                                </div>
-                            </div>
-
-                        </div>
-
-                        {/* 2. Colore Tema */}
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-3">
-                                Tema Colore
-                            </label>
-                            <div className="flex gap-3">
-                                {themeBoardOptions.map((theme) => (
-                                    <button
-                                        key={theme.value}
-                                        type="button"
-                                        onClick={() => setSelectedTheme(theme.value)}
-                                        className={`
-                                            w-10 h-10 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none ring-2 ring-offset-2
-                                            ${theme.class}
-                                            ${selectedTheme === theme.value ? 'ring-slate-400 scale-110 shadow-md' : 'ring-transparent'}
-                                        `}
-                                    >
-                                        {selectedTheme === theme.value && (
-                                            <Check className="w-5 h-5 text-white stroke-[3]" />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 3. Gestione Ospiti */}
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                Gestisci Collaboratori
-                            </label>
-
-                            <div className="flex gap-2 mb-3">
-                                <div className="relative flex-1">
-                                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="email"
-                                        value={guestEmail}
-                                        onChange={(e) => setGuestEmail(e.target.value)}
-                                        placeholder="Nuova email..."
-                                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                handleAddGuest();
-                                            }
-                                        }}
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleAddGuest}
-                                    disabled={!guestEmail.includes('@')}
-                                    className="px-4 py-2 bg-slate-100 text-slate-600 font-medium text-sm rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors"
-                                >
-                                    Aggiungi
-                                </button>
-                            </div>
-
-                            {guests.length > 0 ? (
-                                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 max-h-32 overflow-y-auto">
-                                    <div className="flex flex-wrap gap-2">
-                                        {guests.map((email) => (
-                                            <div
-                                                key={email}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-white text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-sm"
-                                            >
-                                                {email}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveGuest(email)}
-                                                    className="text-slate-400 hover:text-red-500 transition-colors"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <p className="text-xs text-slate-400 italic">Nessun collaboratore invitato.</p>
-                            )}
-                        </div>
+                        {/* Empty state per ospiti */}
+                        {formState.guests.length === 0 && (
+                            <p className="text-xs text-slate-400 italic -mt-4">
+                                Nessun collaboratore invitato.
+                            </p>
+                        )}
                     </form>
                 </div>
 
-                {/* Footer Actions */}
-                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-gray-50/50">
-
-                    <div className="flex items-center">
-                        {showDeleteConfirm ? (
-                            <div className="flex items-center gap-2 animate-in slide-in-from-left-2 fade-in duration-200">
-                                <span className="text-xs font-bold text-red-600 mr-1">Sicuro?</span>
-                                <button
-                                    type="button"
-                                    onClick={handleDelete}
-                                    className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 font-medium"
-                                >
-                                    Sì, elimina
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    className="text-xs text-slate-500 hover:text-slate-800 px-2"
-                                >
-                                    No
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={handleDelete}
-                                className="flex items-center gap-2 text-red-500 hover:text-red-700 text-sm font-medium px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                <span>Elimina</span>
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-slate-600 text-sm font-medium hover:bg-slate-100 rounded-lg transition-colors"
-                        >
-                            Annulla
-                        </button>
-                        <button
-                            type="submit"
-                            form="edit-board-form"
-                            disabled={isLoading || !title}
-                            className="px-5 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all disabled:opacity-70 flex items-center gap-2"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <Save className="w-4 h-4" />
-                            )}
-                            <span>Salva Modifiche</span>
-                        </button>
-                    </div>
-                </div>
-
+                {/* Footer */}
+                <EditFormFooter
+                    isLoading={isLoading}
+                    isValid={!!formState.title.trim()}
+                    showDeleteConfirm={showDeleteConfirm}
+                    onDelete={handleDelete}
+                    onCancelDelete={cancelDelete}
+                    onCancel={onClose}
+                />
             </div>
         </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPONENTI INTERNI
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Footer specifico per il form di modifica.
+ * Include pulsante eliminazione con conferma.
+ */
+function EditFormFooter({
+                            isLoading,
+                            isValid,
+                            showDeleteConfirm,
+                            onDelete,
+                            onCancelDelete,
+                            onCancel,
+                        }: {
+    isLoading: boolean;
+    isValid: boolean;
+    showDeleteConfirm: boolean;
+    onDelete: () => void;
+    onCancelDelete: () => void;
+    onCancel: () => void;
+}) {
+    return (
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-gray-50/50">
+            {/* Sezione eliminazione */}
+            <DeleteSection
+                showConfirm={showDeleteConfirm}
+                onDelete={onDelete}
+                onCancel={onCancelDelete}
+            />
+
+            {/* Sezione azioni principali */}
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    disabled={isLoading}
+                    className="px-4 py-2 text-slate-600 text-sm font-medium hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+                >
+                    Annulla
+                </button>
+                <button
+                    type="submit"
+                    form="edit-board-form"
+                    disabled={isLoading || !isValid}
+                    className="px-5 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    {isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Save className="w-4 h-4" />
+                    )}
+                    <span>Salva Modifiche</span>
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Sezione eliminazione con conferma inline.
+ */
+function DeleteSection({
+                           showConfirm,
+                           onDelete,
+                           onCancel,
+                       }: {
+    showConfirm: boolean;
+    onDelete: () => void;
+    onCancel: () => void;
+}) {
+    if (showConfirm) {
+        return (
+            <div className="flex items-center gap-2 animate-in slide-in-from-left-2 fade-in duration-200">
+                <span className="text-xs font-bold text-red-600 mr-1">
+                    Sicuro?
+                </span>
+                <button
+                    type="button"
+                    onClick={onDelete}
+                    className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 font-medium transition-colors"
+                >
+                    Sì, elimina
+                </button>
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="text-xs text-slate-500 hover:text-slate-800 px-2 transition-colors"
+                >
+                    No
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={onDelete}
+            className="flex items-center gap-2 text-red-500 hover:text-red-700 text-sm font-medium px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+        >
+            <Trash2 className="w-4 h-4" />
+            <span>Elimina</span>
+        </button>
     );
 }
