@@ -65,6 +65,8 @@ export default function RegisterDialog({
                                            onClose,
                                            onRegisterSuccess
                                        }: RegisterDialogProps): React.ReactElement | null {
+
+
     // Form state
     const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
 
@@ -75,21 +77,19 @@ export default function RegisterDialog({
     const [error, setError] = useState('');
     const [isSuccess, setIsSuccess] = useState(false);
 
-    if (!isOpen) return null;
-
     /**
      * Aggiorna un campo del form.
      */
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (error) setError('');
-    };
+        setError('');
+    }, []);
 
     /**
      * Valida il form.
      */
-    const validateForm = (): string | null => {
+    const validateForm = useCallback((): string | null => {
         if (formData.password !== formData.confirmPassword) {
             return ERROR_MESSAGES.PASSWORD_MISMATCH;
         }
@@ -97,12 +97,22 @@ export default function RegisterDialog({
             return ERROR_MESSAGES.PASSWORD_TOO_SHORT;
         }
         return null;
-    };
+    }, [formData.password, formData.confirmPassword]);
+
+    /**
+     * Resetta il form e chiude il dialog.
+     */
+    const handleClose = useCallback(() => {
+        setFormData(INITIAL_FORM_DATA);
+        setIsSuccess(false);
+        setError('');
+        onClose();
+    }, [onClose]);
 
     /**
      * Gestisce l'invio del form.
      */
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -130,17 +140,27 @@ export default function RegisterDialog({
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [validateForm, onRegisterSuccess, handleClose]);
 
     /**
-     * Resetta il form e chiude il dialog.
+     * Toggle visibilità password.
      */
-    const handleClose = useCallback(() => {
-        setFormData(INITIAL_FORM_DATA);
-        setIsSuccess(false);
-        setError('');
-        onClose();
-    }, [onClose]);
+    const togglePasswordVisibility = useCallback(() => {
+        setShowPassword(prev => !prev);
+    }, []);
+
+    /**
+     * Toggle visibilità conferma password.
+     */
+    const toggleConfirmPasswordVisibility = useCallback(() => {
+        setShowConfirmPassword(prev => !prev);
+    }, []);
+
+    // ═══════════════════════════════════════════════════════════
+    // EARLY RETURN DOPO TUTTI GLI HOOKS
+    // ═══════════════════════════════════════════════════════════
+
+    if (!isOpen) return null;
 
     // Render success state
     if (isSuccess) {
@@ -221,7 +241,7 @@ export default function RegisterDialog({
                             value={formData.password}
                             onChange={handleChange}
                             showPassword={showPassword}
-                            onToggle={() => setShowPassword(prev => !prev)}
+                            onToggle={togglePasswordVisibility}
                         />
 
                         {/* Conferma Password */}
@@ -232,7 +252,7 @@ export default function RegisterDialog({
                             value={formData.confirmPassword}
                             onChange={handleChange}
                             showPassword={showConfirmPassword}
-                            onToggle={() => setShowConfirmPassword(prev => !prev)}
+                            onToggle={toggleConfirmPasswordVisibility}
                         />
 
                         {/* Termini */}

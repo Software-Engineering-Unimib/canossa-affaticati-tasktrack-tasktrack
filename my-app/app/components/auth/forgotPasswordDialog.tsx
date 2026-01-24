@@ -33,16 +33,18 @@ export default function ForgotPasswordDialog({
                                                  isOpen,
                                                  onClose
                                              }: ForgotPasswordDialogProps): React.ReactElement | null {
+    // ═══════════════════════════════════════════════════════════
+    // TUTTI GLI HOOKS DEVONO ESSERE CHIAMATI PRIMA DI QUALSIASI RETURN
+    // ═══════════════════════════════════════════════════════════
+
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [state, setState] = useState<DialogState>('form');
 
-    if (!isOpen) return null;
-
     /**
      * Gestisce l'invio del form.
      */
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
 
@@ -51,7 +53,7 @@ export default function ForgotPasswordDialog({
 
         setState('success');
         setIsLoading(false);
-    };
+    }, []);
 
     /**
      * Resetta lo stato e chiude il dialog.
@@ -69,6 +71,19 @@ export default function ForgotPasswordDialog({
         setState('form');
     }, []);
 
+    /**
+     * Aggiorna il valore dell'email.
+     */
+    const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setEmail(e.target.value);
+    }, []);
+
+    // ═══════════════════════════════════════════════════════════
+    // EARLY RETURN DOPO TUTTI GLI HOOKS
+    // ═══════════════════════════════════════════════════════════
+
+    if (!isOpen) return null;
+
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200"
@@ -77,14 +92,20 @@ export default function ForgotPasswordDialog({
         >
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-auto animate-in zoom-in-95 duration-200 overflow-hidden">
                 {/* Tasto chiudi */}
-                <CloseButton onClick={handleClose} />
+                <button
+                    onClick={handleClose}
+                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10"
+                    aria-label="Chiudi"
+                >
+                    <X className="w-5 h-5" />
+                </button>
 
                 {/* Contenuto */}
                 {state === 'form' ? (
                     <FormState
                         email={email}
                         isLoading={isLoading}
-                        onEmailChange={setEmail}
+                        onEmailChange={handleEmailChange}
                         onSubmit={handleSubmit}
                         onBack={onClose}
                     />
@@ -105,21 +126,6 @@ export default function ForgotPasswordDialog({
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * Pulsante di chiusura.
- */
-function CloseButton({ onClick }: { onClick: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors z-10"
-            aria-label="Chiudi"
-        >
-            <X className="w-5 h-5" />
-        </button>
-    );
-}
-
-/**
  * Stato form di inserimento email.
  */
 function FormState({
@@ -131,7 +137,7 @@ function FormState({
                    }: {
     email: string;
     isLoading: boolean;
-    onEmailChange: (value: string) => void;
+    onEmailChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onSubmit: (e: React.FormEvent) => void;
     onBack: () => void;
 }) {
@@ -170,7 +176,7 @@ function FormState({
                             type="email"
                             required
                             value={email}
-                            onChange={(e) => onEmailChange(e.target.value)}
+                            onChange={onEmailChange}
                             placeholder="nome@studenti.it"
                             disabled={isLoading}
                             className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm disabled:opacity-50"
@@ -252,7 +258,7 @@ function SuccessState({
                     onClick={onRetry}
                     className="text-sm text-slate-500 hover:text-blue-600 font-medium transition-colors"
                 >
-                    Non hai ricevuto l'email? Riprova
+                    Non hai ricevuto l&apos;email? Riprova
                 </button>
             </div>
         </div>
