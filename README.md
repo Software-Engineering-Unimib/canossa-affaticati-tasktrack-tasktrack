@@ -237,6 +237,8 @@ cd tasktrack/my-app
 ```bash
 # Con bun
 bun install
+bun add @supabase/ssr @supabase/supabase-js
+```
 
 ### Step 3: Configura Supabase
 
