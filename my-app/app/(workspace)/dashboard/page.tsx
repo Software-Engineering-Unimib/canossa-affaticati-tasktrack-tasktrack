@@ -11,7 +11,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Search, Loader2 } from 'lucide-react';
 
 import EditBoardDialog from '@/app/components/Board/EditBoardDialog';
@@ -27,13 +27,48 @@ import { Board } from '@/items/Board';
  * Pagina dashboard.
  */
 export default function DashboardPage() {
-    const { user } = useAuth();
-    const { boards, isLoading, refreshBoards } = useBoards();
+    const { user, loading: authLoading } = useAuth();
+    const { boards, refreshBoards } = useBoards();
+
+    // Stato di loading locale - si resetta ogni volta che la pagina viene montata
+    const [isPageLoading, setIsPageLoading] = useState(true);
 
     // Stati UI
     const [searchQuery, setSearchQuery] = useState('');
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [boardToEdit, setBoardToEdit] = useState<Board | null>(null);
+
+    // ═══════════════════════════════════════════════════════════
+    // CARICA I DATI OGNI VOLTA CHE LA PAGINA VIENE MONTATA
+    // ═══════════════════════════════════════════════════════════
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadData = async () => {
+            setIsPageLoading(true);
+
+            try {
+                await refreshBoards();
+            } catch (error) {
+                console.error('Errore caricamento bacheche:', error);
+            } finally {
+                setTimeout(() => {
+                    if (isMounted) {
+                        setIsPageLoading(false);
+                    }
+                }, 300);
+            }
+        };
+
+        if (user && !authLoading) {
+            loadData();
+        }
+
+        return () => {
+            isMounted = false;
+        };
+    }, [user, authLoading, refreshBoards]);
 
     /**
      * Bacheche filtrate per query di ricerca.
@@ -110,8 +145,8 @@ export default function DashboardPage() {
     // RENDER
     // ═══════════════════════════════════════════════════════════
 
-    // Loading state
-    if (isLoading && boards.length === 0) {
+    // Loading state - mostrato ogni volta che la pagina viene montata
+    if (authLoading || isPageLoading) {
         return (
             <div className="flex h-full w-full items-center justify-center min-h-[50vh]">
                 <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
@@ -232,7 +267,7 @@ function CreateBoardButton({ onClick }: { onClick: () => void }) {
 function EmptySearchResult({ query }: { query: string }) {
     return (
         <div className="col-span-full text-center py-12 text-slate-400 italic">
-            Nessuna bacheca trovata per "{query}"
+            Nessuna bacheca trovata per &quot;{query}&quot;
         </div>
     );
 }
