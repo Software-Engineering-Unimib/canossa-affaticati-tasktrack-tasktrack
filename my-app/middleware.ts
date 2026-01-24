@@ -1,124 +1,107 @@
-/**
- * @fileoverview Middleware Next.js per la protezione delle route.
- *
- * Gestisce:
- * - Redirect utenti non autenticati da route protette → login
- * - Redirect utenti autenticati da route auth → dashboard
- *
- * @module middleware
- */
-
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-/**
- * Route che richiedono autenticazione.
- */
-const PROTECTED_ROUTES = [
-    '/dashboard',
-    '/board',
-    '/categories',
-    '/priorities',
-    '/profile',
-] as const;
+export async function middleware(request: NextRequest) {
+    let supabaseResponse = NextResponse.next({
+        request,
+    });
 
-/**
- * Route di autenticazione (login/register).
- * Gli utenti già autenticati vengono reindirizzati.
- */
-const AUTH_ROUTES = ['/login', '/register'] as const;
-
-/**
- * Route di default post-login.
- */
-const DEFAULT_AUTHENTICATED_ROUTE = '/dashboard';
-
-/**
- * Route di default per utenti non autenticati.
- */
-const DEFAULT_UNAUTHENTICATED_ROUTE = '/login';
-
-/**
- * Verifica se un path corrisponde a una route protetta.
- */
-function isProtectedRoute(path: string): boolean {
-    return PROTECTED_ROUTES.some(route => path.startsWith(route));
-}
-
-/**
- * Verifica se un path è una route di autenticazione.
- */
-function isAuthRoute(path: string): boolean {
-    return AUTH_ROUTES.some(route => path === route);
-}
-
-/**
- * Crea un client Supabase configurato per il middleware.
- * Gestisce la lettura/scrittura dei cookie di sessione.
- */
-function createMiddlewareSupabaseClient(request: NextRequest, response: NextResponse) {
-    return createServerClient(
+    const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
-                get(name: string) {
-                    return request.cookies.get(name)?.value;
+                getAll() {
+                    return request.cookies.getAll();
                 },
-                set(name: string, value: string, options: CookieOptions) {
-                    request.cookies.set({ name, value, ...options });
-                    response.cookies.set({ name, value, ...options });
-                },
-                remove(name: string, options: CookieOptions) {
-                    request.cookies.set({ name, value: '', ...options });
-                    response.cookies.set({ name, value: '', ...options });
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        request.cookies.set(name, value)
+                    );
+                    supabaseResponse = NextResponse.next({
+                        request,
+                    });
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        supabaseResponse.cookies.set(name, value, options)
+                    );
                 },
             },
         }
     );
-}
 
-/**
- * Middleware principale.
- * Eseguito per ogni richiesta che matcha la configurazione.
- */
-export async function middleware(request: NextRequest) {
-    // Inizializza response
-    let response = NextResponse.next({
-        request: { headers: request.headers },
-    });
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
-    // Crea client Supabase
-    const supabase = createMiddlewareSupabaseClient(request, response);
+    const { pathname } = request.nextUrl;
 
-    // Verifica autenticazione
-    const { data: { user } } = await supabase.auth.getUser();
+    // ═══════════════════════════════════════════════════════════
+    // REDIRECT PAGINA INIZIALE (localhost:3000 o /)
+    // ═══════════════════════════════════════════════════════════
 
-    const path = request.nextUrl.pathname;
-
-    // Redirect: utente non autenticato su route protetta
-    if (!user && isProtectedRoute(path)) {
-        const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = DEFAULT_UNAUTHENTICATED_ROUTE;
-        return NextResponse.redirect(redirectUrl);
+    if (pathname === '/') {
+        // Se l'utente è loggato, vai alla dashboard
+        if (user) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/dashboard';
+            return NextResponse.redirect(url);
+        }
+        // Se non è loggato, vai al login
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
     }
 
-    // Redirect: utente autenticato su route auth
-    if (user && isAuthRoute(path)) {
-        const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = DEFAULT_AUTHENTICATED_ROUTE;
-        return NextResponse.redirect(redirectUrl);
+    // ═══════════════════════════════════════════════════════════
+    // PROTEZIONE ROUTE WORKSPACE
+    // ═══════════════════════════════════════════════════════════
+
+    // Se l'utente non è loggato e prova ad accedere a route protette
+    if (!user && pathname.startsWith('/dashboard')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
     }
 
-    return response;
+    if (!user && pathname.startsWith('/board')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
+    }
+
+    if (!user && pathname.startsWith('/categories')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
+    }
+
+    if (!user && pathname.startsWith('/priorities')) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // REDIRECT SE GIÀ LOGGATO
+    // ═══════════════════════════════════════════════════════════
+
+    // Se l'utente è già loggato e prova ad accedere al login
+    if (user && pathname === '/login') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/dashboard';
+        return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
 }
 
-/**
- * Configurazione del matcher.
- * Esclude risorse statiche e ottimizzazioni Next.js.
- */
 export const config = {
     matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/',
+        '/login',
+        '/dashboard/:path*',
+        '/board/:path*',
+        '/categories/:path*',
+        '/priorities/:path*',
     ],
 };

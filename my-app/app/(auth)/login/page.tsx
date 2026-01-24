@@ -107,7 +107,6 @@ export default function LoginPage() {
      */
     const handleRegisterSuccess = useCallback(() => {
         setError(null);
-        alert('Registrazione avvenuta! Controlla la tua email.');
     }, []);
 
     return (
