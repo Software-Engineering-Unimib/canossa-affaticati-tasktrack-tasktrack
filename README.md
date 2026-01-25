@@ -218,18 +218,22 @@ tasktrack/
 Assicurati di avere installato:
 
 - **Node.js** >= 18.0.0
-- **npm** >= 9.0.0 (o yarn >= 1.22.0, o pnpm >= 8.0.0)
+- **bun** >= 1.3.5
+		(in alternativa npm >= 9.0.0, yarn >= 1.22.0, pnpm >= 8.0.0)
 - **Git**
 - Un account **Supabase** (gratuito)
 
 ### Step 1: Clona il Repository
 
 ```bash
+# Inizializza la cartella
+git init
+
 # Clona il repository
 git clone https://github.com/Software-Engineering-Unimib/canossa-affaticati-tasktrack-tasktrack
 
 # Entra nella directory
-cd tasktrack/my-app
+cd .\canossa-affaticati-tasktrack-tasktrack\my-app
 ```
 
 ### Step 2: Installa le Dipendenze (Scarica BUN.SH)
