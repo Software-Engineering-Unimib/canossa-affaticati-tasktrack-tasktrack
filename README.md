@@ -739,21 +739,6 @@ La modalità focus ti aiuta a concentrarti senza distrazioni.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Design Pattern Utilizzati
-
-| Pattern | Utilizzo | File |
-|---------|----------|------|
-| **Singleton** | Client Supabase unico | `lib/supabase.ts` |
-| **Repository** | Accesso dati astratto | `models/*.ts` |
-| **Factory** | Creazione oggetti dominio | `models/*.ts` |
-| **Observer** | Stato reattivo | `context/*.tsx` |
-| **Strategy** | Stili dinamici | `items/Priority.tsx` |
-| **Composite** | Provider composition | `app/provider.tsx` |
-
-Per maggiori dettagli, consulta il [Report di Ingegneria del Software](./REPORT_INGEGNERIA_SOFTWARE.md).
-
----
-
 ## 🔧 Configurazione Avanzata
 
 ### Variabili d'Ambiente
